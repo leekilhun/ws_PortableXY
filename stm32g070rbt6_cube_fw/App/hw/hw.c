@@ -59,6 +59,7 @@ bool hwInit(void)
 #else // use small size log func
   uartOpen(HW_LOG_CH, 115200);
   uartPrintf(HW_LOG_CH, "[ fw Begin... ]\r\n");
+
 #endif
 
 #ifdef _USE_HW_I2C
