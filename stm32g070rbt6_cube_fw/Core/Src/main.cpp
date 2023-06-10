@@ -22,7 +22,7 @@ DMA_HandleTypeDef hdma_usart2_rx;
 DMA_HandleTypeDef hdma_usart2_tx;
 DMA_HandleTypeDef hdma_usart3_rx;
 DMA_HandleTypeDef hdma_usart3_tx;
-DMA_HandleTypeDef hdma_usart4_rx;
+//DMA_HandleTypeDef hdma_usart4_rx;
 
 
 
@@ -61,6 +61,7 @@ int main(void)
   MX_USART4_UART_Init();
   MX_RTC_Init();
 
+  bspInit();
   hwInit();
   exhwInit();
   apInit();
