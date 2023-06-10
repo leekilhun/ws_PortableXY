@@ -1,7 +1,7 @@
 
 #include "main.h"
-#include "ap.hpp"
 
+#include "ap.hpp"
 
 
 I2C_HandleTypeDef hi2c1;
@@ -18,11 +18,11 @@ UART_HandleTypeDef huart3;
 UART_HandleTypeDef huart4;
 DMA_HandleTypeDef hdma_usart1_rx;
 DMA_HandleTypeDef hdma_usart1_tx;
-DMA_HandleTypeDef hdma_usart2_rx;
-DMA_HandleTypeDef hdma_usart2_tx;
-DMA_HandleTypeDef hdma_usart3_rx;
-DMA_HandleTypeDef hdma_usart3_tx;
-DMA_HandleTypeDef hdma_usart4_rx;
+//DMA_HandleTypeDef hdma_usart2_rx;
+//DMA_HandleTypeDef hdma_usart2_tx;
+//DMA_HandleTypeDef hdma_usart3_rx;
+//DMA_HandleTypeDef hdma_usart3_tx;
+//DMA_HandleTypeDef hdma_usart4_rx;
 
 
 
@@ -61,6 +61,9 @@ int main(void)
   MX_USART4_UART_Init();
   MX_RTC_Init();
 
+  bspInit();
+  hwInit();
+  exhwInit();
   apInit();
   apMain();
 
@@ -144,7 +147,7 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.Timing = 0x10707DBC;
+  hi2c1.Init.Timing = 0x00602173;
   hi2c1.Init.OwnAddress1 = 0;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -192,7 +195,7 @@ static void MX_I2C2_Init(void)
 
   /* USER CODE END I2C2_Init 1 */
   hi2c2.Instance = I2C2;
-  hi2c2.Init.Timing = 0x10707DBC;
+  hi2c2.Init.Timing = 0x00602173;
   hi2c2.Init.OwnAddress1 = 0;
   hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;

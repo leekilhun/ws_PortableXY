@@ -10,7 +10,7 @@
 
 
 
-#include "def.h"
+#include "bsp.h"
 
 
 /****************************************************
@@ -69,7 +69,12 @@
 
 #define _USE_HW_UART
 #define      HW_UART_MAX_CH         4
+#define      HW_UART_MOTOR          _DEF_UART1
+#define      HW_UART_PC             _DEF_UART2
+#define      HW_UART_LCD            _DEF_UART3
+#define      HW_UART_LOG            _DEF_UART4
 #define _USE_HW_UART_1_DMA
+#define _USE_HW_UART_2_DMA
 #define _USE_HW_UART_3_DMA
 
 
