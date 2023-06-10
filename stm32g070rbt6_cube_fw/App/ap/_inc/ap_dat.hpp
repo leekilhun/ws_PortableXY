@@ -17,13 +17,13 @@
  * st24c64c - 32byte 256 page  0x0000  ~ 0x2000 *
  */
 
-#define APDAT_START_ADDRESS               0x0000
+#define APDAT_START_ADDRESS                0x0000
 
-#define APDAT_START_ADDR                  APDAT_START_ADDRESS
-#define APDAT_LENGTH                      4
-#define APDAT_ADDR(x)                     APDAT_START_ADDR + ((x) * APDAT_LENGTH)
-#define APDAT_CNT_MAX                     8
-#define APDAT_END_ADDR                    APDAT_START_ADDR + (APDAT_LENGTH * APDAT_CNT_MAX)
+#define APDAT_START_ADDR                   APDAT_START_ADDRESS
+#define APDAT_LENGTH                       4
+#define APDAT_ADDR(x)                      APDAT_START_ADDR + ((x) * APDAT_LENGTH)
+#define APDAT_CNT_MAX                      8
+#define APDAT_END_ADDR                     APDAT_START_ADDR + (APDAT_LENGTH * APDAT_CNT_MAX)
 
 
 // use machine test (2 byte * 16 data)

@@ -57,8 +57,16 @@ bool hwInit(void)
   logOpen(HW_LOG_CH, 115200);
   logPrintf("[ fw Begin... ]\r\n");
 #else // use small size log func
+
+  firm_version_t *p_boot_ver = (firm_version_t *)(FLASH_ADDR_BOOT_VER);
+
   uartOpen(HW_LOG_CH, 115200);
-  uartPrintf(HW_LOG_CH, "[ fw Begin... ]\r\n");
+  logPrintf("[ Firmware Begin... ]\r\n");
+  logPrintf("Booting..Name \t\t: %s\r\n", p_boot_ver->name);
+  logPrintf("Booting..Ver  \t\t: %s\r\n", p_boot_ver->version);
+  logPrintf("Firmware.Name \t\t: %s\r\n", _DEF_FW_NAME);
+  logPrintf("Firmware.Ver  \t\t: %s\r\n", _DEF_FW_VERSION);
+  logPrintf("Core Clock    \t\t: %d Mhz\r\n", SystemCoreClock/1000000);
 #endif
 
 #ifdef _USE_HW_I2C

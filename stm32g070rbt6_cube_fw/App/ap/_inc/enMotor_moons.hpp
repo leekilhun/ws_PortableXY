@@ -219,8 +219,8 @@ namespace MOTOR
 			motion_param_t motor_param{};
 			AP_OBJ::MOTOR  instance_no{};
 			//axis_dat* p_apAxisDat{};
-			MCU_REG::ap_reg* ptr_ap_reg{};
-			//ap_dat* p_apCfgDat{};
+			ap_reg* ptr_apReg{};
+			ap_dat* ptr_cfgDat{};
 			uart_moons* p_comm{};
 
 			cfg_t() = default;
@@ -274,7 +274,7 @@ namespace MOTOR
 		inline void Init(cfg_t& cfg) {
 			m_cfg = cfg;
 			m_cfg.p_comm->AttCallbackFunc(m_cfg.instance_no, this, receiveDataFunc);
-			logPrintf(">>enMotor_moons Init Success! instance[%d] \n", (uint8_t)m_cfg.instance_no);
+			logPrintf(">> enMotor_moons Init Success! instance[%d] \n", (uint8_t)m_cfg.instance_no);
 
 		}
 
