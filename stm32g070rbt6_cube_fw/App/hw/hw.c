@@ -62,7 +62,7 @@ bool hwInit(void)
 #endif
 
 #ifdef _USE_HW_I2C
-  //ret &= i2cInit();
+  ret &= i2cInit();
 #endif
 
 

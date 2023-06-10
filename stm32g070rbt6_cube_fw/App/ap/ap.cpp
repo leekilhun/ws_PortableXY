@@ -12,6 +12,11 @@
 static void cliApp(cli_args_t *args);
 #endif
 
+/****************************************************
+  0. mcu data and register
+ ****************************************************/
+MCU_REG::ap_reg mcu_reg;
+ap_dat ap_cfgdata;
 
 /****************************************************
   1. ap instances

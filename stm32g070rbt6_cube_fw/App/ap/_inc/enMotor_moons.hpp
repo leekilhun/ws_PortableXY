@@ -219,7 +219,7 @@ namespace MOTOR
 			motion_param_t motor_param{};
 			AP_OBJ::MOTOR  instance_no{};
 			//axis_dat* p_apAxisDat{};
-			//MCU_REG::ap_reg* p_apReg{};
+			MCU_REG::ap_reg* ptr_ap_reg{};
 			//ap_dat* p_apCfgDat{};
 			uart_moons* p_comm{};
 

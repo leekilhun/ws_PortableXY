@@ -55,27 +55,6 @@ bool at24c64Init(void)
 
   return ret;
 
-#if 0
-  uint8_t id;
-
-  if (i2cOpen(AT23C64_I2C, 400) == true)
-  {
-    id = i2cScan(AT23C32_I2C);
-    if (id == 0)
-    {
-      logPrintf("at24c64_Init Null id \n");
-    }
-
-    logPrintf("at24c64_Init id - 0x%02x \n", id);
-    is_init = true;
-
-    return true;
-  }
-
-  logPrintf("at24c64_Init Open Fail\n");
-  return false;
-
-#endif
 }
 
 

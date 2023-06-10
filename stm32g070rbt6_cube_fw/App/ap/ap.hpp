@@ -28,6 +28,7 @@
 /* register -> communication -> basic unit(engine) -> combined unit(engine) -> control */
 //register + io_manager
 #include "ap_reg.hpp"
+#include "ap_dat.hpp"
 #include "ap_io.hpp"
 
 //basic
