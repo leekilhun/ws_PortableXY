@@ -50,6 +50,9 @@ bool hwInit(void)
   ret &= uartInit();
 #endif
 
+#ifdef _USE_HW_GPIO
+  ret &= gpioInit();
+#endif
 
 #ifdef _USE_HW_LOG
   ret &= logInit();

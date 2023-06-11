@@ -49,7 +49,7 @@ struct enOp
   struct cfg_t
   {
     ap_reg* ptr_mcu_reg{};
-    //ap_io * ptr_mcu_io{};
+    ap_io * ptr_mcu_io{};
 
     uint8_t sw_pin_start{};
     uint8_t sw_pin_stop{};

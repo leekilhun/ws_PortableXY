@@ -34,7 +34,7 @@ public:
     ap_reg* ptr_apReg;
     enOp* ptr_op;
     //ap_log* ptr_apLog;
-    //ap_io* ptr_ApIo;
+    ap_io* ptr_io;
     MOTOR::cnMotors* ptr_motors{};
 
     cfg_t() = default;

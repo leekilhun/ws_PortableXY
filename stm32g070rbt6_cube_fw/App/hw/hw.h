@@ -21,6 +21,7 @@ extern "C" {
 #include "uart.h"
 #include "cli.h"
 #include "i2c.h"
+#include "gpio.h"
 
 
 

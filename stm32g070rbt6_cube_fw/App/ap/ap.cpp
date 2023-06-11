@@ -17,6 +17,7 @@ static void cliApp(cli_args_t *args);
  ****************************************************/
 ap_reg mcu_reg;
 ap_dat ap_cfgdata;
+ap_io mcu_io;
 
 /****************************************************
   1. ap instances
@@ -25,6 +26,16 @@ ap_dat ap_cfgdata;
 MOTOR::uart_moons moons_comm;
 
 MOTOR::enMotor_moons moons_motors[AP_OBJ::MOTOR_MAX]{ M_SetMotorId(AP_OBJ::MOTOR_X),M_SetMotorId(AP_OBJ::MOTOR_Y) };
+enOp op_panel;
+
+
+// control
+cnAuto autoManager;
+//cnJob process;
+//cnTasks tasks;
+MOTOR::cnMotors motors;
+
+
 
 
 void  apInit(void)
@@ -47,6 +58,21 @@ void  apInit(void)
     moons_comm.Init(cfg);
   }
 
+  /* operating panel sw initial */
+  {
+    enOp::cfg_t cfg = {0,};
+    cfg.ptr_mcu_io      = &mcu_io;
+    cfg.ptr_mcu_reg     = &mcu_reg;
+    cfg.sw_pin_start    = _GPIO_OP_SW_START;
+    cfg.sw_pin_stop     = _GPIO_OP_SW_STOP;
+    cfg.sw_pin_reset    = _GPIO_OP_SW_RESET;
+    cfg.sw_pin_estop    = _GPIO_OP_SW_ESTOP;
+
+    cfg.lamp_pin_start  = _GPIO_OP_LAMP_START;
+    cfg.lamp_pin_stop   = _GPIO_OP_LAMP_STOP;
+    cfg.lamp_pin_reset  = _GPIO_OP_LAMP_RESET;
+    op_panel.Init(cfg);
+  }
 
   /* motor initial */
   {
@@ -72,6 +98,23 @@ void  apInit(void)
     moons_motors[AP_OBJ::MOTOR_Y].Init(cfg);
 
   }
+
+
+
+  /* automanager initial */
+  {
+    cnAuto::cfg_t auto_cfg = {0, };
+    auto_cfg.ptr_apReg = &mcu_reg;
+    //auto_cfg.p_apLog = &mcu_log;
+    auto_cfg.ptr_op =&op_panel;
+    auto_cfg.ptr_io = &mcu_io;;
+    auto_cfg.ptr_motors = &motors;
+    autoManager.Init(auto_cfg);
+  }
+
+
+  /*Assign Obj */
+  mcu_io.Init();
 
 
 #ifdef _USE_HW_CLI
