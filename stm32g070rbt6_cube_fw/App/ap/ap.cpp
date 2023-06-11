@@ -15,7 +15,7 @@ static void cliApp(cli_args_t *args);
 /****************************************************
   0. mcu data and register
  ****************************************************/
-MCU_REG::ap_reg mcu_reg;
+ap_reg mcu_reg;
 ap_dat ap_cfgdata;
 
 /****************************************************
@@ -30,11 +30,12 @@ MOTOR::enMotor_moons moons_motors[AP_OBJ::MOTOR_MAX]{ M_SetMotorId(AP_OBJ::MOTOR
 void  apInit(void)
 {
 
+#ifdef _USE_HW_CLI
   if(cliOpen(HW_UART_LCD, 115200))
     logPrintf(">>cliOpen Success! ch[%d], baud[%d] \n",HW_UART_LCD, 115200);
   else
     logPrintf(">>cliOpen Fail! ch[%d], baud[%d] \n",HW_UART_LCD, 115200);
-
+#endif
 
 
   // uart
@@ -53,8 +54,8 @@ void  apInit(void)
 
     enMotor_moons::cfg_t cfg { };
     cfg.instance_no = AP_OBJ::MOTOR_X;
-    //cfg.p_apReg = &mcu_reg;
-    //cfg.p_apCfgDat = &apCfg_data;
+    cfg.ptr_apReg = &mcu_reg;
+    cfg.ptr_cfgDat = &ap_cfgdata;
     //cfg.p_apAxisDat = &axis_data;
     cfg.p_comm = &moons_comm;
     cfg.motor_param.Init();
@@ -63,8 +64,8 @@ void  apInit(void)
 
     cfg = {};
     cfg.instance_no = AP_OBJ::MOTOR_Y;
-    //cfg.p_apReg = &mcu_reg;
-    //cfg.p_apCfgDat = &apCfg_data;
+    cfg.ptr_apReg = &mcu_reg;
+    cfg.ptr_cfgDat = &ap_cfgdata;
     //cfg.p_apAxisDat = &axis_data;
     cfg.p_comm = &moons_comm;
     cfg.motor_param.Init();

@@ -19,6 +19,7 @@
 #include "ap_def.h"
 
 #include "def_obj.hpp"
+#include "def.err.hpp"
 
 /* ap object*/
 #include "ap_utils.hpp"
