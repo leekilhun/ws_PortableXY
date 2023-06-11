@@ -27,8 +27,10 @@ build
 *.fw
 *.elf
 *.map
+*.json
 
 ## 폴더 무시
+cmake/
 build/
 삭제대기/
 backup/
