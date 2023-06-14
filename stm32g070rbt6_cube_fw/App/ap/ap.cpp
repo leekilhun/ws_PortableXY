@@ -81,6 +81,12 @@ void  apInit(void)
     op_panel.Init(cfg);
   }
 
+    cfg.lamp_pin_start  = _GPIO_OP_LAMP_START;
+    cfg.lamp_pin_stop   = _GPIO_OP_LAMP_STOP;
+    cfg.lamp_pin_reset  = _GPIO_OP_LAMP_RESET;
+    op_panel.Init(cfg);
+  }
+
   /* motor initial */
   {
     using namespace MOTOR;
@@ -169,21 +175,21 @@ void  apMain(void)
 
     updateApReg();
 
-    // non-block코드.
+    // non-block�ڵ�.
     //motors.ThreadJob();
 
-    // non-block코드.
+    // non-block�ڵ�.
     //op_lcd.ThreadJob();
 
-    // non-block코드
+    // non-block�ڵ�
     //remote_pc.ThreadJob();
 
-    // non-block코드
+    // non-block�ڵ�
     tasks.ThreadJob();
 
     eventOpPanel();
 
-    // non-block코드
+    // non-block�ڵ�
     autoManager.ThreadJob();
 
     updateLamp();
