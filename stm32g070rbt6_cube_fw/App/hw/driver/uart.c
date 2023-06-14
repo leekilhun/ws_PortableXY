@@ -69,7 +69,6 @@ bool uartInit(void)
 bool uartOpen(uint8_t ch, uint32_t baud)
 {
   bool ret = false;
-  logPrintf(">>uartOpen ch[%d], baud[%d] \n",ch, baud);
   switch(ch)
   {
     case _DEF_UART1:
@@ -371,7 +370,6 @@ uint32_t uartPrintf(uint8_t ch, const char *fmt, ...)
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 
-  //logPrintf(">>HAL_UART_RxCpltCallback  (huart->Instance)[%d] \n",huart->Instance );
   if (huart->Instance == USART1)
   {
 #ifdef _USE_HW_UART_1_DMA

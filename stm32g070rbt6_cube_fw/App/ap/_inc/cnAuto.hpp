@@ -11,7 +11,7 @@
 
 
 
-#define AUTO_ALARM(head, msg)  AlarmAuto(head, (__FILE__), __FUNCTION__, __LINE__,  msg)
+//#define AUTO_ALARM(head, msg)  AlarmAuto(head, (__FILE__), __FUNCTION__, __LINE__,  msg)
 
 struct cnAuto
 {
@@ -34,7 +34,7 @@ public:
     ap_reg* ptr_apReg;
     enOp* ptr_op;
     //ap_log* ptr_apLog;
-    //ap_io* ptr_ApIo;
+    ap_io* ptr_io;
     MOTOR::cnMotors* ptr_motors{};
 
     cfg_t() = default;
@@ -73,7 +73,7 @@ public:
    ****************************************************/
   inline void Init(cnAuto::cfg_t& cfg) {
     m_cfg = cfg;
-    logPrintf(">> cnAuto Init Success!  \n");
+    LOG_PRINT("Init Success");
   }
 
   inline enOp::mode_e GetOPMode() {
@@ -334,6 +334,13 @@ public:
 #endif
   }
 
+  inline bool IsModeAuto() {
+    if(m_cfg.ptr_apReg->state_reg.factory_initial)
+      return false;
+    return m_cfg.ptr_io->m_in.in_mode_key_auto
+        || m_cfg.ptr_apReg->option_reg.mode_auto;
+  }
+
   // condition for auto-run
   inline int AutoReady() {
     using state_t = enOp::status_e;
@@ -445,6 +452,7 @@ public:
     SetOPStatus(enOp::status_e::ERR_STOP);
   }
 
+
 #if 0
   inline void AlarmAuto(log_dat::head_t* p_head,
     const char* file,
@@ -467,8 +475,8 @@ public:
     AlarmAuto(err);
 
   }
-
 #endif
+
 
 };
 

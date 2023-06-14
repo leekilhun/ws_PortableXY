@@ -274,7 +274,7 @@ namespace MOTOR
 		inline void Init(cfg_t& cfg) {
 			m_cfg = cfg;
 			m_cfg.p_comm->AttCallbackFunc(m_cfg.instance_no, this, receiveDataFunc);
-			logPrintf(">> enMotor_moons Init Success! instance[%d] \n", (uint8_t)m_cfg.instance_no);
+			LOG_PRINT("Init Success! instance[%d]", (uint8_t)m_cfg.instance_no);
 
 		}
 

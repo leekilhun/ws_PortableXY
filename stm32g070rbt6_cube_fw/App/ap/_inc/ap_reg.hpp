@@ -10,14 +10,14 @@
 
 /*
 
-   01. AUTO_RUNNING : 자동 실행
-   02. EMG_STOP : 비상정지
-   03. AUTO_READY : 자동 실행이 가능한 지 체크하고, 문제 없다면 시작 신호를 대기
-   04. AUTO_STOP : 자동 실행 중 정지된 상태
-   05. DETECT_AREA_SEN : 자동 동작이 정지되어야 한다.
-   06. MOTOR_ON : 모터가 정상적으로 enable 됨
-   07. ORG_COMPLETED : 시스템 초기화가 완료되어 자동 운전이 가능한 상태
-   08. ALARM_STATUS : 시스템에 리셋할 에러가 있다.
+   01. AUTO_RUNNING :
+   02. EMG_STOP :
+   03. AUTO_READY : Check if auto-run is possible, and if there is no problem, wait for the start signal
+   04. AUTO_STOP :Stopped during auto run
+   05. DETECT_AREA_SEN : Automatic operation should be stopped.
+   06. MOTOR_ON : Motor is enabled normally
+   07. ORG_COMPLETED : System initialization has been completed and automatic operation is possible
+   08. ALARM_STATUS : There is an error to reset the system.
 
 	 11. STATE_10,
 	 12. STATE_11,
@@ -28,14 +28,14 @@
 	 17. REQUEST_INITAL,
 	 18. ALL_CHECK_OK,
 
-
-
-
-
-
-
  */
 
+
+/*
+
+ ap register 상태정보는 어디서 업데이트를 할지?
+
+ */
 
 #ifdef _USE_HW_RTOS
 #define AP_REG_LOCK_BEGIN osMutexWait(ap_reg_mutex_id, osWaitForever)

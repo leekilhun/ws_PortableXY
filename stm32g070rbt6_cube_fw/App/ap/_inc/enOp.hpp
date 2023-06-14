@@ -49,7 +49,7 @@ struct enOp
   struct cfg_t
   {
     ap_reg* ptr_mcu_reg{};
-    //ap_io * ptr_mcu_io{};
+    ap_io * ptr_mcu_io{};
 
     uint8_t sw_pin_start{};
     uint8_t sw_pin_stop{};
@@ -82,7 +82,7 @@ public:
   enOp() : m_status(enOp::status_e::INIT), m_mode (enOp::mode_e::STOP){ }
   virtual ~enOp(){}
   inline int Init(enOp::cfg_t& cfg){
-    logPrintf(">>enOp Init Success! \n");
+    LOG_PRINT("Init Success!");
     m_cfg = cfg;
     return 0;
   }
@@ -104,26 +104,24 @@ public:
   }
 
 
-  #if 0
-
   inline void UpdateState(){
-    enum{in,out,_max};
+    enum{in, out, _max};
     std::array<uint8_t, _max> data {};
 
     uint8_t gpio {};
-    gpio = gpioPinRead(m_cfg.sw_pin_start) << 0
-         | gpioPinRead(m_cfg.sw_pin_stop)  << 1
-         | gpioPinRead(m_cfg.sw_pin_reset) << 2
-         | gpioPinRead(m_cfg.sw_pin_estop) << 3
-        ;
+    gpio |= gpioPinRead(m_cfg.sw_pin_start) << 0;
+    gpio |= gpioPinRead(m_cfg.sw_pin_stop)  << 1;
+    gpio |= gpioPinRead(m_cfg.sw_pin_reset) << 2;
+    gpio |= gpioPinRead(m_cfg.sw_pin_estop) << 3;
     data[in] = gpio;
-    gpio = 0x0;
-    gpio = gpioPinRead(m_cfg.lamp_pin_start) << 0
-        | gpioPinRead(m_cfg.lamp_pin_stop)  << 1
-        | gpioPinRead(m_cfg.lamp_pin_reset) << 2
-        ;
+
+    gpio = 0x00;
+    gpio |= gpioPinRead(m_cfg.lamp_pin_start) << 0;
+    gpio |= gpioPinRead(m_cfg.lamp_pin_stop)  << 1;
+    gpio |= gpioPinRead(m_cfg.lamp_pin_reset) << 2;
     data[out] = gpio;
-   m_cfg.ptr_mcu_io->m_sysio.system_io = (uint16_t)((uint16_t)data[in]<<0 | (uint16_t)data[out]<<8) ;
+
+    m_cfg.ptr_mcu_io->m_sysio.system_io = (uint16_t)((uint16_t)data[in]<<0 | (uint16_t)data[out]<<8) ;
   }
 
   inline bool GetPressed(enOp::panel_e op_sw){
@@ -154,22 +152,21 @@ public:
   }
 
   inline void LampToggle(lamp_e lamp){
-      switch (lamp) {
-        case LAMP_START:
-          gpioPinToggle(m_cfg.lamp_pin_start);
-          break;
-        case LAMP_STOP:
-          gpioPinToggle(m_cfg.lamp_pin_stop);
-          break;
-        case LAMP_RESET:
-          gpioPinToggle(m_cfg.lamp_pin_reset);
-          break;
-        default:
-          break;
-      };
-    }
+    switch (lamp) {
+      case LAMP_START:
+        gpioPinToggle(m_cfg.lamp_pin_start);
+        break;
+      case LAMP_STOP:
+        gpioPinToggle(m_cfg.lamp_pin_stop);
+        break;
+      case LAMP_RESET:
+        gpioPinToggle(m_cfg.lamp_pin_reset);
+        break;
+      default:
+        break;
+    };
+  }
 
-#endif
 
 };
 

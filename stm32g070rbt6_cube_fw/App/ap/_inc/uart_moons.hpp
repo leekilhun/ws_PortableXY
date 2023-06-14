@@ -74,6 +74,7 @@ namespace MOTOR
       std::array <uint8_t, MOONS_PACKET_BUFF_LENGTH> buffer{};
 
       rx_packet_t() = default;
+      ~rx_packet_t() = default;
       
          // copy constructor
       rx_packet_t(const rx_packet_t& rhs) = default;
@@ -134,7 +135,7 @@ namespace MOTOR
       m_cfg = cfg;
       if (uartOpen(cfg.ch, cfg.baud))
       {
-        logPrintf(">>uart_moons Init Success! Uart ch[%d], baud[%d] \n",cfg.ch, cfg.baud);
+        LOG_PRINT("uart_moons Init Success! Uart ch[%d], baud[%d]",cfg.ch, cfg.baud);
         m_Isconnected = true;
       }
     }

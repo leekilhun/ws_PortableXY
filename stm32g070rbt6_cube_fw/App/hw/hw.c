@@ -50,6 +50,9 @@ bool hwInit(void)
   ret &= uartInit();
 #endif
 
+#ifdef _USE_HW_GPIO
+  ret &= gpioInit();
+#endif
 
 #ifdef _USE_HW_LOG
   ret &= logInit();
@@ -61,12 +64,12 @@ bool hwInit(void)
   firm_version_t *p_boot_ver = (firm_version_t *)(FLASH_ADDR_BOOT_VER);
 
   uartOpen(HW_LOG_CH, 115200);
-  logPrintf("[ Firmware Begin... ]\r\n");
+  logPrintf("[ Firmware Begin... ]\r\n\n\n");
   logPrintf("Booting..Name \t\t: %s\r\n", p_boot_ver->name);
   logPrintf("Booting..Ver  \t\t: %s\r\n", p_boot_ver->version);
   logPrintf("Firmware.Name \t\t: %s\r\n", _DEF_FW_NAME);
   logPrintf("Firmware.Ver  \t\t: %s\r\n", _DEF_FW_VERSION);
-  logPrintf("Core Clock    \t\t: %d Mhz\r\n", SystemCoreClock/1000000);
+  logPrintf("Core Clock    \t\t: %d Mhz\r\n\n\n", SystemCoreClock/1000000);
 #endif
 
 #ifdef _USE_HW_I2C

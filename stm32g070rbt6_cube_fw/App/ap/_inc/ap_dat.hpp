@@ -97,6 +97,111 @@ struct ap_dat
 
 
 
+struct AxisSystemXYZ
+{
+  uint16_t pos_x{}; // max position data 650mm
+  uint16_t pos_y{}; // max position data 650mm
+  uint16_t pos_z{}; // max position data 650mm
+
+  AxisSystemXYZ() = default;
+  ~AxisSystemXYZ() = default;
+  // copy constructor
+  AxisSystemXYZ(const AxisSystemXYZ& rhs) = default;
+  // copy assignment operator
+  AxisSystemXYZ& operator=(const AxisSystemXYZ& rhs) = default;
+  // move constructor
+  AxisSystemXYZ(AxisSystemXYZ&& rhs) = default;
+  // move assignment operator
+  AxisSystemXYZ& operator=(AxisSystemXYZ&& rhs) = default;
+
+  void Init()
+  {
+    pos_x = 0;
+    pos_y = 0;
+    pos_z = 0;
+  }
+};
+
+struct pos_data_st
+{
+  using type = AxisSystemXYZ;
+  enum idx_e : uint8_t
+  {
+    mdi_0,
+    mdi_1,
+    mdi_2,
+    mdi_3,
+
+    mdi_254,
+    mdi_max // max 255
+  };
+
+  /*position unit = 10um*/
+  /*velocity unit =rpm */
+  /*acc dec unit =m/ss */
+  // max position data 650mm
+  type data{};
+  uint16_t rpm;
+  uint16_t acc;
+  uint16_t dec;
+
+  pos_data_st() = default;
+  ~pos_data_st() = default;
+  // copy constructor
+  pos_data_st(const pos_data_st& rhs) = default;
+  // copy assignment operator
+  pos_data_st& operator=(const pos_data_st& rhs) = default;
+  // move constructor
+  pos_data_st(pos_data_st&& rhs) = default;
+  // move assignment operator
+  pos_data_st& operator=(pos_data_st&& rhs) = default;
+
+  void Init()
+  {
+    data.Init();
+    rpm = 0;
+    acc = 0;
+    dec = 0;
+  }
+};
+
+
+struct sequece_idx_data_st
+{
+  enum linetype_e : uint8_t
+  {
+    lt_sequence,
+    lt_pos,
+  };
+
+  uint16_t idx{};
+  uint16_t next_line{};
+
+  linetype_e line_type{};
+  pos_data_st::idx_e pos_data_idx{};
+
+  uint16_t entry_setout{};
+  uint16_t exit_setout{};
+
+  uint16_t entry_delay{}; // ms
+  uint16_t exit_delay{};  // ms
+
+  uint16_t condition_in{};
+  uint16_t condition_pass_line{};
+  uint16_t condition_fail_line{};
+
+  sequece_idx_data_st() = default;
+  ~sequece_idx_data_st() = default;
+  // copy constructor
+  sequece_idx_data_st(const sequece_idx_data_st& rhs) = default;
+  // copy assignment operator
+  sequece_idx_data_st& operator=(const sequece_idx_data_st& rhs) = default;
+  // move constructor
+  sequece_idx_data_st(sequece_idx_data_st&& rhs) = default;
+  // move assignment operator
+  sequece_idx_data_st& operator=(sequece_idx_data_st&& rhs) = default;
+};
+// end of sequece_idx_data_st
 
 
 
