@@ -221,7 +221,7 @@ namespace MOTOR
 			//axis_dat* p_apAxisDat{};
 			ap_reg* ptr_apReg{};
 			ap_dat* ptr_cfgDat{};
-			uart_moons* p_comm{};
+			uart_moons* ptr_comm{};
 
 			cfg_t() = default;
 
@@ -240,14 +240,13 @@ namespace MOTOR
 	public:
 		cfg_t m_cfg;
 
-
-	private:
 		uint8_t m_nodeId;
 		uart_moons::rx_packet_t m_receiveData;
 		moons_data_t m_motorData;
 		uint16_t m_commErrCnt;
 		int m_cmdDistPulse;
 		uint16_t m_alarmCnt;
+		bool m_isReceived;
 #ifdef _USE_HW_RTOS
 		osMutexId m_mutex_id;
 #endif
@@ -257,7 +256,7 @@ namespace MOTOR
 		 ****************************************************/
 	public:
 		enMotor_moons(uint8_t id) : m_cfg{}, m_nodeId(id), m_receiveData()
-			, m_motorData{}, m_commErrCnt{}, m_cmdDistPulse{}, m_alarmCnt{}
+			, m_motorData{}, m_commErrCnt{}, m_cmdDistPulse{}, m_alarmCnt{}, m_isReceived{}
 		{
 #ifdef _USE_HW_RTOS
 			osMutexDef(m_mutex_id);
@@ -273,7 +272,7 @@ namespace MOTOR
 
 		inline void Init(cfg_t& cfg) {
 			m_cfg = cfg;
-			m_cfg.p_comm->AttCallbackFunc(m_cfg.instance_no, this, receiveDataFunc);
+			m_cfg.ptr_comm->AttCallbackFunc(m_cfg.instance_no, this, receiveDataFunc);
 			LOG_PRINT("Init Success! instance[%d]", (uint8_t)m_cfg.instance_no);
 
 		}
@@ -294,6 +293,10 @@ namespace MOTOR
 			ret_data = m_motorData;
 		}
 
+		inline errno_t ResetAlarmNon(){
+		  return m_cfg.ptr_comm->ResetAlarmNon(m_nodeId);
+		}
+
 		/*
 		inline uint8_t GetInstanceNo() {
 			return m_cfg.instance_no;
@@ -311,6 +314,7 @@ namespace MOTOR
 	private:
 
 		void insertData(uart_moons::rx_packet_t& data) {
+		  m_isReceived = true;
 			m_receiveData = data;
 			uint8_t* ptr_data = m_receiveData.data;
 			enum func_e {
@@ -395,7 +399,7 @@ namespace MOTOR
 		}
 
 		inline errno_t MotorOnOff(bool on_off = true) {
-			return m_cfg.p_comm->MotorOnOff(m_nodeId, on_off);
+			return m_cfg.ptr_comm->MotorOnOff(m_nodeId, on_off);
 		}
 
 		inline errno_t SetParamDataMove(uint32_t rpm, uint32_t acc, uint32_t dec) {
@@ -407,7 +411,7 @@ namespace MOTOR
 					(uint16_t)(dec* MODBUS_MULTIPLE_PARAM_ACC),
 					(uint16_t)(rpm* MODBUS_MULTIPLE_PARAM_VEL) };
 
-			return m_cfg.p_comm->SetMoveParam(m_nodeId, paramsC);
+			return m_cfg.ptr_comm->SetMoveParam(m_nodeId, paramsC);
 		}
 
 
@@ -420,7 +424,7 @@ namespace MOTOR
 					(uint16_t)(dec* MODBUS_MULTIPLE_PARAM_ACC),
 					(uint16_t)(rpm* MODBUS_MULTIPLE_PARAM_VEL) };
 
-			return m_cfg.p_comm->SetMove(m_nodeId, paramsC, dist_pulse);
+			return m_cfg.ptr_comm->SetMove(m_nodeId, paramsC, dist_pulse);
 		}
 
 #if 0
@@ -443,7 +447,7 @@ namespace MOTOR
 			param.accel *= MODBUS_MULTIPLE_PARAM_ACC;
 			param.decel *= MODBUS_MULTIPLE_PARAM_ACC;
 			param.speed *= MODBUS_MULTIPLE_PARAM_VEL;
-			return m_cfg.p_comm->JogMove(m_nodeId, param, is_cw);
+			return m_cfg.ptr_comm->JogMove(m_nodeId, param, is_cw);
 		}
 
 
@@ -453,19 +457,19 @@ namespace MOTOR
 				(uint16_t)(m_cfg.motor_param.jog_accel* MODBUS_MULTIPLE_PARAM_ACC),
 					(uint16_t)(m_cfg.motor_param.jog_decel* MODBUS_MULTIPLE_PARAM_ACC),
 					(uint16_t)(m_cfg.motor_param.jog_speed* MODBUS_MULTIPLE_PARAM_VEL) };
-			return m_cfg.p_comm->JogMove(m_nodeId, paramsC, is_cw);
+			return m_cfg.ptr_comm->JogMove(m_nodeId, paramsC, is_cw);
 		}
 
 		inline errno_t JogStop() {
-			return m_cfg.p_comm->JogStop(m_nodeId);
+			return m_cfg.ptr_comm->JogStop(m_nodeId);
 		}
 
 		inline errno_t MoveStop() {
-			return m_cfg.p_comm->MoveStop(m_nodeId);
+			return m_cfg.ptr_comm->MoveStop(m_nodeId);
 		}
 
 		inline errno_t SetOutput(uint16_t pin_no, bool is_on = true) {
-			return m_cfg.p_comm->SetOutput(m_nodeId, pin_no, is_on);
+			return m_cfg.ptr_comm->SetOutput(m_nodeId, pin_no, is_on);
 		}
 
 		inline errno_t MoveRelative(int dist_pulse, uint32_t rpm, uint32_t acc, uint32_t dec) {
@@ -474,7 +478,7 @@ namespace MOTOR
 
 			ret = SetMoveDistSpeed(rpm, acc, dec, dist_pulse);
 			if (ret == ERROR_SUCCESS)
-				return m_cfg.p_comm->MoveRelactive(m_nodeId);
+				return m_cfg.ptr_comm->MoveRelactive(m_nodeId);
 			else
 				return ret;
 		}
@@ -484,7 +488,7 @@ namespace MOTOR
 			m_cmdDistPulse = m_motorData.immediate_abs_position + dist_pulse;
 			ret = SetMoveDistSpeed(rpm_f, acc, dec, dist_pulse);
 			if (ret == ERROR_SUCCESS)
-				return m_cfg.p_comm->MoveRelactive(m_nodeId);
+				return m_cfg.ptr_comm->MoveRelactive(m_nodeId);
 			else
 				return ret;
 		}
@@ -492,9 +496,9 @@ namespace MOTOR
 		inline errno_t MoveRelative(int dist_pulse) {
 			errno_t ret = ERROR_SUCCESS;
 			m_cmdDistPulse = m_motorData.immediate_abs_position + dist_pulse;
-			ret = m_cfg.p_comm->DistancePoint(m_nodeId, dist_pulse);
+			ret = m_cfg.ptr_comm->DistancePoint(m_nodeId, dist_pulse);
 			if (ret == ERROR_SUCCESS)
-				return m_cfg.p_comm->MoveRelactive(m_nodeId);
+				return m_cfg.ptr_comm->MoveRelactive(m_nodeId);
 			else
 				return ret;
 		}
@@ -505,7 +509,7 @@ namespace MOTOR
 
 			ret = SetMoveDistSpeed(rpm, acc, dec, dist_pulse);
 			if (ret == ERROR_SUCCESS)
-				return m_cfg.p_comm->moveAbsolutive(m_nodeId);
+				return m_cfg.ptr_comm->moveAbsolutive(m_nodeId);
 			else
 				return ret;
 		}
@@ -513,9 +517,9 @@ namespace MOTOR
 		inline errno_t MoveAbsolutive(int dist_pulse) {
 			errno_t ret = ERROR_SUCCESS;
 			m_cmdDistPulse = dist_pulse;
-			ret = m_cfg.p_comm->DistancePoint(m_nodeId, dist_pulse);
+			ret = m_cfg.ptr_comm->DistancePoint(m_nodeId, dist_pulse);
 			if (ret == ERROR_SUCCESS)
-				return m_cfg.p_comm->moveAbsolutive(m_nodeId);
+				return m_cfg.ptr_comm->moveAbsolutive(m_nodeId);
 			else
 				return ret;
 		}
@@ -526,7 +530,7 @@ namespace MOTOR
 			ret = MoveAbsolutive(m_cmdDistPulse, m_cfg.motor_param.move_speed, m_cfg.motor_param.move_accel, m_cfg.motor_param.move_decel);
 
 			if (ret == ERROR_SUCCESS)
-				return m_cfg.p_comm->moveAbsolutive(m_nodeId);
+				return m_cfg.ptr_comm->moveAbsolutive(m_nodeId);
 			else
 				return ret;
 		}
@@ -550,7 +554,7 @@ namespace MOTOR
 		}
 
 		inline errno_t GetMotorData() {
-			return m_cfg.p_comm->RequestMotorData(m_nodeId);
+			return m_cfg.ptr_comm->RequestMotorData(m_nodeId);
 		}
 
 		inline errno_t SetOriginParam(origin_param_t& param) {
@@ -560,7 +564,7 @@ namespace MOTOR
 					(uint16_t)(param.decel* MODBUS_MULTIPLE_PARAM_ACC),
 					(uint16_t)(param.speed* MODBUS_MULTIPLE_PARAM_VEL)};
 
-			return  m_cfg.p_comm->SetOriginParam(m_nodeId, paramsC, param.find_home_dir);
+			return  m_cfg.ptr_comm->SetOriginParam(m_nodeId, paramsC, param.find_home_dir);
 		}
 
 
@@ -570,20 +574,20 @@ namespace MOTOR
 				(uint16_t)(m_cfg.origin_param.accel* MODBUS_MULTIPLE_PARAM_ACC),
 					(uint16_t)(m_cfg.origin_param.decel* MODBUS_MULTIPLE_PARAM_ACC),
 					(uint16_t)(m_cfg.origin_param.speed* MODBUS_MULTIPLE_PARAM_VEL)};
-			ret = m_cfg.p_comm->SetOriginParam(m_nodeId, paramsC, m_cfg.origin_param.find_home_dir);
+			ret = m_cfg.ptr_comm->SetOriginParam(m_nodeId, paramsC, m_cfg.origin_param.find_home_dir);
 			//logPrintf("enMotor_moons OriginMotor  m_cfg.origin_param.find_home_dir(%d)   \n", m_cfg.origin_param.find_home_dir);
 			if (ret == ERROR_SUCCESS)
-				return  m_cfg.p_comm->OriginAxis(m_nodeId, m_cfg.origin_param.home_x_no, m_cfg.origin_param.home_x_level);
+				return  m_cfg.ptr_comm->OriginAxis(m_nodeId, m_cfg.origin_param.home_x_no, m_cfg.origin_param.home_x_level);
 			return ret;
 		}
 
 
 		inline errno_t ClearState() {
-			return m_cfg.p_comm->ClearState(m_nodeId);
+			return m_cfg.ptr_comm->ClearState(m_nodeId);
 		}
 
 		inline errno_t ClearEncoder() {
-			return m_cfg.p_comm->ClearEncoder(m_nodeId);
+			return m_cfg.ptr_comm->ClearEncoder(m_nodeId);
 		}
 
 		inline bool IsInPose() {

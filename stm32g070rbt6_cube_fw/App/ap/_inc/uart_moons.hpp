@@ -163,6 +163,44 @@ namespace MOTOR
       m_func = cb;
     }
 
+    inline bool IsAvailableComm(){
+      if (m_packet.request_flag == 0)
+        return true;
+      return false;
+    }
+
+    inline errno_t ResetAlarmNon(uint8_t node_id){
+      constexpr uint16_t alarm_reset = 186;
+      uint8_t  func = write_SingleReg;
+      uint16_t reg_no = Command_Opcode;
+      uint16_t value = alarm_reset;
+      uint16_t crc = 0xffff;
+      enum{id, fn, reg_h, reg_l, v1, v0,
+        crc_l, crc_h,  _max};
+      std::array<uint8_t, _max> send_data ={
+          node_id,
+          func,
+          (uint8_t)(reg_no >> 8),
+          (uint8_t)reg_no,
+          (uint8_t)(value >> 8),
+          (uint8_t)(value >> 0),
+          (uint8_t)(0),
+          (uint8_t)(0)
+      };
+
+      for(uint16_t i = 0; i < crc_l; i++)
+      {
+        UTL::crc16_modbus_update(&crc, send_data[i]);
+      }
+      send_data[crc_l] = (uint8_t)(crc >> 0);
+      send_data[crc_h] = (uint8_t)(crc >> 8);
+
+      if (uartWrite(m_cfg.ch, send_data.data(), (uint32_t)send_data.size()))
+        return ERROR_SUCCESS;
+      else
+        return -1;
+    }
+
     inline errno_t RequestMotorData(uint8_t node_id){
       enum{id, fn,reg_h, reg_l, length_h, length_l, crc_l, crc_h,  _max};
       uint8_t  func = read_HoldingReg;
@@ -1079,15 +1117,13 @@ namespace MOTOR
     }
 
 
-    inline bool IsAvailableComm(){
-      if (m_packet.request_flag == 0)
-        return true;
-      return false;
-    }
+
 
 
 
 #endif
+
+
 
     inline errno_t SendCmd(uint8_t* ptr_data, uint32_t size) {
       m_packet_sending_ms = millis();

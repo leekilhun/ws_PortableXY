@@ -32,7 +32,9 @@ ap_io mcu_io;
 // engine layer
 MOTOR::uart_moons moons_comm;
 
-MOTOR::enMotor_moons moons_motors[AP_OBJ::MOTOR_MAX]{ M_SetMotorId(AP_OBJ::MOTOR_X),M_SetMotorId(AP_OBJ::MOTOR_Y) };
+MOTOR::enMotor_moons moons_motors[AP_OBJ::MOTOR_MAX]{
+  M_SetMotorId(AP_OBJ::MOTOR_X),M_SetMotorId(AP_OBJ::MOTOR_Y),M_SetMotorId(AP_OBJ::MOTOR_R)
+};
 enOp op_panel;
 
 
@@ -81,12 +83,6 @@ void  apInit(void)
     op_panel.Init(cfg);
   }
 
-    cfg.lamp_pin_start  = _GPIO_OP_LAMP_START;
-    cfg.lamp_pin_stop   = _GPIO_OP_LAMP_STOP;
-    cfg.lamp_pin_reset  = _GPIO_OP_LAMP_RESET;
-    op_panel.Init(cfg);
-  }
-
   /* motor initial */
   {
     using namespace MOTOR;
@@ -96,7 +92,7 @@ void  apInit(void)
     cfg.ptr_apReg = &mcu_reg;
     cfg.ptr_cfgDat = &ap_cfgdata;
     //cfg.p_apAxisDat = &axis_data;
-    cfg.p_comm = &moons_comm;
+    cfg.ptr_comm = &moons_comm;
     cfg.motor_param.Init();
     moons_motors[AP_OBJ::MOTOR_X].Init(cfg);
 
@@ -106,13 +102,26 @@ void  apInit(void)
     cfg.ptr_apReg = &mcu_reg;
     cfg.ptr_cfgDat = &ap_cfgdata;
     //cfg.p_apAxisDat = &axis_data;
-    cfg.p_comm = &moons_comm;
+    cfg.ptr_comm = &moons_comm;
     cfg.motor_param.Init();
     moons_motors[AP_OBJ::MOTOR_Y].Init(cfg);
 
   }
 
 
+  /* control motors */
+  {
+    using namespace MOTOR;
+
+    cnMotors::cfg_t cfg = {0,};
+    cfg.ptr_motor = moons_motors;
+    //cfg.p_apAxisDat =  &axis_data;
+    cfg.ptr_comm = &moons_comm;
+    cfg.ptr_cfgDat = &ap_cfgdata;
+    cfg.ptr_io = &mcu_io;
+    cfg.ptr_apReg = &mcu_reg;
+    motors.Init(cfg);
+  }
 
   /* automanager initial */
   {
@@ -175,7 +184,7 @@ void  apMain(void)
 
     updateApReg();
 
-    // non-block�ڵ�.
+    // non-block
     //motors.ThreadJob();
 
     // non-block�ڵ�.
