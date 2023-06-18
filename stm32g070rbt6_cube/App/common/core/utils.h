@@ -20,6 +20,10 @@
 
 
 
+#include "def.h"
+
+uint8_t utilParseArgs(char *argStr, char **argv, const char* delim_char, int max);
+
 
 #ifdef __cplusplus
  }

@@ -14,6 +14,8 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <sstream>
+#include <string>
 
 #ifndef errno_t
 #define errno_t int

@@ -9,7 +9,6 @@
 
 #include "uart.h"
 
-
 #ifdef _USE_HW_UART
 
 #include "qbuffer.h"
@@ -77,21 +76,25 @@ bool uartOpen(uint8_t ch, uint32_t baud)
       uart_tbl[ch].is_open = true;
       qbufferCreate(&qbuffer[ch], &uart_tbl[ch].rx_buf[0], UART_BUF_LENGTH);
 #ifdef _USE_HW_UART_1_DMA
-      if(HAL_UART_Receive_DMA(&huart1, (uint8_t *)&uart_tbl[ch].rx_buf[0], UART_BUF_LENGTH) != HAL_OK)
+      if (huart1.RxState == HAL_UART_STATE_READY)
       {
-        ret = false;
-      }
-      else
-      {
-        qbuffer[ch].in  = qbuffer[ch].len - hdma_usart1_rx.Instance->CNDTR;
-        qbuffer[ch].out = qbuffer[ch].in;
-      }
+        if(HAL_UART_Receive_DMA(&huart1, (uint8_t *)&uart_tbl[ch].rx_buf[0], UART_BUF_LENGTH) != HAL_OK)
+        {
+          LOG_PRINT("HAL_UART_Receive_DMA failed! ch[%d]",_DEF_UART1);
+          ret = false;
+        }
+        else
+        {
+          qbuffer[ch].in  = qbuffer[ch].len - hdma_usart1_rx.Instance->CNDTR;
+          qbuffer[ch].out = qbuffer[ch].in;
+        }
 #else
-      if (HAL_UART_Receive_IT(&huart1, (uint8_t *)&uart_tbl[ch].rx_data, 1) != HAL_OK)
-      {
-        ret = false;
-      }
+        if (HAL_UART_Receive_IT(&huart1, (uint8_t *)&uart_tbl[ch].rx_data, 1) != HAL_OK)
+        {
+          ret = false;
+        }
 #endif
+      }
 
     }
     break;
@@ -122,7 +125,6 @@ bool uartOpen(uint8_t ch, uint32_t baud)
 
     case _DEF_UART3:
     {
-
       ret = true;
       uart_tbl[ch].is_open = true;
       qbufferCreate(&qbuffer[ch], &uart_tbl[ch].rx_buf[0], UART_BUF_LENGTH);
@@ -137,12 +139,12 @@ bool uartOpen(uint8_t ch, uint32_t baud)
         qbuffer[ch].out = qbuffer[ch].in;
       }
 #else
-      if (HAL_UART_Receive_IT(&huart3, (uint8_t *)&uart_tbl[ch].rx_data, 1) != HAL_OK)
-      {
-        ret = false;
-      }
-#endif
+  if (HAL_UART_Receive_IT(&huart3, (uint8_t *)&uart_tbl[ch].rx_data, 1) != HAL_OK)
+  {
+    ret = false;
   }
+#endif
+    }
     break;
 
     case _DEF_UART4:
@@ -278,37 +280,37 @@ bool uartClose(uint8_t ch)
 uint32_t uartAvailable(uint8_t ch)
 {
   uint32_t ret = 0;
-    switch(ch)
-    {
-      case _DEF_UART1:
+  switch(ch)
+  {
+    case _DEF_UART1:
 #ifdef _USE_HW_UART_1_DMA
-        qbuffer[ch].in = (qbuffer[ch].len - hdma_usart1_rx.Instance->CNDTR);
+      qbuffer[ch].in = (qbuffer[ch].len - hdma_usart1_rx.Instance->CNDTR);
 #endif
-        ret = qbufferAvailable(&qbuffer[ch]);
-        break;
+      ret = qbufferAvailable(&qbuffer[ch]);
+      break;
 
-      case _DEF_UART2:
+    case _DEF_UART2:
 #ifdef _USE_HW_UART_2_DMA
-        qbuffer[ch].in = (qbuffer[ch].len - hdma_usart2_rx.Instance->CNDTR);
+      qbuffer[ch].in = (qbuffer[ch].len - hdma_usart2_rx.Instance->CNDTR);
 #endif
-        ret = qbufferAvailable(&qbuffer[ch]);
-        break;
+      ret = qbufferAvailable(&qbuffer[ch]);
+      break;
 
-      case _DEF_UART3:
+    case _DEF_UART3:
 #ifdef _USE_HW_UART_3_DMA
-        qbuffer[ch].in = (qbuffer[ch].len - hdma_usart3_rx.Instance->CNDTR);
+      qbuffer[ch].in = (qbuffer[ch].len - hdma_usart3_rx.Instance->CNDTR);
 #endif
-        ret = qbufferAvailable(&qbuffer[ch]);
-        break;
+      ret = qbufferAvailable(&qbuffer[ch]);
+      break;
 
-      case _DEF_UART4:
-        ret = qbufferAvailable(&qbuffer[ch]);
-        break;
+    case _DEF_UART4:
+      ret = qbufferAvailable(&qbuffer[ch]);
+      break;
 
-      default:
-        break;
-    }
-    return ret;
+    default:
+      break;
+  }
+  return ret;
 }
 
 

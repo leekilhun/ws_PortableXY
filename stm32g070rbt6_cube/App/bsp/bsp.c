@@ -8,6 +8,7 @@
 
 #include "bsp.h"
 #include "uart.h"
+#include "utils.h"
 
 
 bool bspInit(void)
@@ -62,3 +63,35 @@ void logPrintf(const char *fmt, ...)
 
 }
 #endif
+
+
+
+
+void logView(const char* file, const char* func, const int line, const char* fmt, ...)
+{
+
+#ifdef DEBUG
+  const int ARG_TBL_CNT_MAX = 10;
+  const uint8_t FILE_STR_MAX = 255;
+
+  char tmp_str[FILE_STR_MAX];
+  memset(tmp_str,0, FILE_STR_MAX);
+  strcpy(tmp_str, file);
+  char* arg_tbl[ARG_TBL_CNT_MAX];
+  memset(arg_tbl,0, ARG_TBL_CNT_MAX);
+  uint8_t arg_cnt = utilParseArgs(tmp_str, arg_tbl, "/", ARG_TBL_CNT_MAX);
+
+  va_list args;
+  char buf[256];
+  va_start(args, fmt);
+  vsnprintf(buf, 256, fmt, args);
+  uartPrintf(HW_LOG_CH, "[%s][%s(%d)][%s] \n", arg_tbl[arg_cnt - 1], func, line, (const char*)buf);
+  va_end(args);
+
+#endif
+
+
+}
+
+
+

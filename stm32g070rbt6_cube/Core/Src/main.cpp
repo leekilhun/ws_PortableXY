@@ -18,10 +18,10 @@ UART_HandleTypeDef huart3;
 UART_HandleTypeDef huart4;
 DMA_HandleTypeDef hdma_usart1_rx;
 DMA_HandleTypeDef hdma_usart1_tx;
-//DMA_HandleTypeDef hdma_usart2_rx;
-//DMA_HandleTypeDef hdma_usart2_tx;
-//DMA_HandleTypeDef hdma_usart3_rx;
-//DMA_HandleTypeDef hdma_usart3_tx;
+DMA_HandleTypeDef hdma_usart2_rx;
+DMA_HandleTypeDef hdma_usart2_tx;
+DMA_HandleTypeDef hdma_usart3_rx;
+DMA_HandleTypeDef hdma_usart3_tx;
 //DMA_HandleTypeDef hdma_usart4_rx;
 
 

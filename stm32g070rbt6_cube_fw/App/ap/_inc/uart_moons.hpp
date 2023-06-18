@@ -61,6 +61,54 @@ namespace MOTOR
       uint8_t ch{}; uint32_t baud{};
     };
 
+
+    struct packet_st
+    {
+      uint8_t node_id{};
+      uint8_t func_type{};
+      uint16_t reg_addr{};
+      uint16_t reg_length{};
+      uint8_t data_length{};
+      uint8_t* data{};
+      uint16_t checksum{};
+      uint16_t rx_checksum{};
+      std::array<uint8_t, MOONS_PACKET_BUFF_LENGTH> buffer{};
+      uint8_t buffer_idx{};
+      uint16_t data_cnt{};
+      uint32_t resp_ms{};
+      prc_step_t state{};
+
+      packet_st() = default;
+      // copy constructor
+      packet_st(const packet_st& other) = default;
+      // copy assignment
+      packet_st& operator=(const packet_st& other) = default;
+      // move constructor
+      packet_st(packet_st&& other) = default;
+      // move assignment
+      packet_st& operator=(packet_st&& other) = default;
+      // destructor
+      ~packet_st() = default;
+
+      uint8_t BufferAdd(uint8_t rx_data)
+      {
+        buffer[buffer_idx] = rx_data;
+        buffer_idx = (buffer_idx + 1) % MOONS_PACKET_BUFF_LENGTH;
+        return buffer_idx;
+      }
+
+      void BufferClear()
+      {
+        buffer.fill(0);
+        buffer_idx = 0;
+        data_cnt = 0;
+        checksum = 0xffff;
+        state.SetStep(0);
+      }
+    };
+
+
+    /*
     struct rx_packet_t
     {
       uint8_t   node_id{};
@@ -75,14 +123,13 @@ namespace MOTOR
 
       rx_packet_t() = default;
       ~rx_packet_t() = default;
-      
-         // copy constructor
+      // copy constructor
       rx_packet_t(const rx_packet_t& rhs) = default;
-        // copy assignment operator
+      // copy assignment operator
       rx_packet_t& operator=(const rx_packet_t& rhs) = default;
-        // move constructor
+      // move constructor
       rx_packet_t(rx_packet_t&& rhs) = default;
-        // move assignment operator
+      // move assignment operator
       rx_packet_t& operator=(rx_packet_t&& rhs) = default;
 
     };
@@ -98,10 +145,11 @@ namespace MOTOR
 
       rx_packet_t  rx_packet{};
     };
-
+     */
     bool m_Isconnected;
+    uint8_t   m_reqFlag{};
     cfg_t m_cfg;
-    modbus_t m_packet;
+    packet_st m_packet;
 
     std::array <void* ,AP_OBJ::MOTOR_MAX> m_objs;
     evt_cb m_func;
@@ -116,7 +164,7 @@ namespace MOTOR
      *  Constructor
      ****************************************************/
   public:
-    uart_moons():m_Isconnected{}, m_cfg{}, m_packet{}, m_objs{}, m_func{}
+    uart_moons():m_Isconnected{}, m_reqFlag{}, m_cfg{}, m_packet{}, m_objs{}, m_func{}
     ,m_packet_sending_ms{}
     {
 #ifdef _USE_HW_RTOS
@@ -141,7 +189,8 @@ namespace MOTOR
     }
 
     inline bool Recovery() {
-      m_packet.request_flag = 0;
+      m_reqFlag = 0;
+      //m_packet.request_flag = 0;
       uartClose(m_cfg.ch);
 
       m_Isconnected = uartOpen(m_cfg.ch, m_cfg.baud);
@@ -164,9 +213,7 @@ namespace MOTOR
     }
 
     inline bool IsAvailableComm(){
-      if (m_packet.request_flag == 0)
-        return true;
-      return false;
+      return (m_reqFlag == 0);
     }
 
     inline errno_t ResetAlarmNon(uint8_t node_id){
@@ -234,6 +281,19 @@ namespace MOTOR
       if (m_Isconnected != true)
         return -1;
 
+/*
+  moons on
+TxData.Data : 01 06 00 7c 00 9f 08 7a
+RxData.node_id : 0x01
+RxData.func_type : 0x06
+RxData.data_length : 0x02
+RxData.Data : 00 9f
+
+
+ 01 ff f8 b8
+ 1 6 0 7c 0 9f 8 7a
+
+ */
       constexpr uint16_t motor_on =  159;
       constexpr uint16_t motor_off =  158;
       enum{id, fn,reg_h, reg_l, length_h, length_l, crc_l, crc_h,  _max};
@@ -260,14 +320,14 @@ namespace MOTOR
       send_data[crc_h] = (uint8_t)(crc >> 8);
 
       constexpr uint32_t timeout = 100;
-      uint8_t retray_cnt = MOONS_RETRY_CNT_MAX;
+      uint8_t retray_cnt = 1; //MOONS_RETRY_CNT_MAX;
       uint32_t ms =millis();
       while (retray_cnt)
       {
         errno_t result = SendCmdRxResp(send_data.data(), (uint32_t)send_data.size(), timeout);
         if (result == ERROR_SUCCESS)
         {
-          logPrintf("uart_moons MotorOnOff Success! response time [%d]ms \n",millis() - ms);
+          LOG_PRINT("MotorOnOff Success! response time [%d]ms",millis() - ms);
           return ERROR_SUCCESS;
         }
         else
@@ -275,6 +335,8 @@ namespace MOTOR
           retray_cnt--;
         }
       }
+      Recovery();
+      LOG_PRINT("MotorOnOff comm failed");
       return -1;
       //return (SendCmd(send_data.data(), (uint32_t)send_data.size()));
 
@@ -329,6 +391,8 @@ namespace MOTOR
           retray_cnt--;
         }
       }
+      Recovery();
+      LOG_PRINT("DistancePoint comm failed");
       return -1;
 
     }
@@ -353,7 +417,7 @@ namespace MOTOR
 
       uint16_t crc = 0xffff;
       enum{id, fn, reg_h, reg_l, reg_cnt_h, reg_cnt_l, b_cnt, v5, v4, v3, v2, v1, v0,
-                    crc_l, crc_h,  _max};
+        crc_l, crc_h,  _max};
 
       std::array<uint8_t, _max> send_data = {
           node_id,
@@ -394,6 +458,8 @@ namespace MOTOR
           retray_cnt--;
         }
       }
+      Recovery();
+      LOG_PRINT("OriginAxis comm failed");
       return -1;
 
     }
@@ -662,11 +728,11 @@ namespace MOTOR
           value,
           (uint16_t) (asc_port_0 + pin_no),
           (uint16_t)(is_on?out_on_state:out_off_state)
-          };
+      };
       constexpr uint16_t reg_cnt = v_max;
       constexpr uint8_t byte_cnt = v_max * 2;
       enum  { id, fn, reg_h, reg_l, reg_cnt_h, reg_cnt_l,b_cnt,
-          v5, v4, v3, v2, v1, v0, crc_l, crc_h, _max };
+        v5, v4, v3, v2, v1, v0, crc_l, crc_h, _max };
 
       std::array<uint8_t, _max> send_data = {
           node_id,
@@ -1127,8 +1193,17 @@ namespace MOTOR
 
     inline errno_t SendCmd(uint8_t* ptr_data, uint32_t size) {
       m_packet_sending_ms = millis();
-      ++m_packet.request_flag;
+      ++m_reqFlag;
+      //++m_packet.request_flag;
+      std::string s{};
+      for (uint8_t i = 0; i < size; i++) {
+        char hex[5];
+        std::sprintf(hex, "%02X", ptr_data[i]);//"0x%02X"
+        s += hex;
+        s += " ";
+      }
 
+      LOG_PRINT("send packet! [%s]",s.c_str());
       if (uartWrite(m_cfg.ch, ptr_data, size)){
         return ERROR_SUCCESS;
       }
@@ -1167,186 +1242,121 @@ namespace MOTOR
         STATE_WAIT_CHECKSUM_L,STATE_WAIT_CHECKSUM_H
       };
 
+      uint8_t rx_data = 0 ;
 
-      bool ret = false;
-      uint8_t rx_data = 0x00;
-
-      uint8_t data_cnt = 0;
-      std::array <uint8_t, (MOONS_PACKET_BUFF_LENGTH + 8)> data_arry = {0,};
-
-      while(uartAvailable(m_cfg.ch))
+      if (m_packet.state.MoreThan(100))
       {
-        if(data_cnt <(MOONS_PACKET_BUFF_LENGTH + 8))
-        {
-          data_arry[data_cnt++] = uartRead(m_cfg.ch);
-        }
-        else
-        {
-          break;
-        }
-      }//while
-
-      if (data_cnt == 0)
-      {
-        return false;
+        m_packet.BufferClear();
       }
-      // update flag and for debug
+       while (uartAvailable(m_cfg.ch))
       {
-        m_Isconnected = true;
-      }
-      rx_packet_t* rx_packet = &m_packet.rx_packet;
+        rx_data = uartRead(m_cfg.ch);
+        LOG_PRINT("rx_data %d", rx_data);
 
-      if (millis() - m_packet.prev_ms >= 100)
-      {
-        m_packet.state = STATE_WAIT_ID;
-        m_packet.index = 0;
-        m_packet.data_cnt = 0;
-        rx_packet->check_sum = 0xffff;
-        memset(&rx_packet->buffer[0], 0x00, MOONS_PACKET_BUFF_LENGTH);
-      }
-      m_packet.prev_ms = millis();
-
-
-      for (uint8_t i = 0 ; i < data_cnt ; i ++ )
-      {
-        rx_data = data_arry[i];
-
-        switch (m_packet.state)
+        switch (m_packet.state.GetStep())
         {
           case STATE_WAIT_ID:
-          {
-            rx_packet->node_id = rx_data;
-            m_packet.index = 0;
-            m_packet.data_cnt = 0;
-            rx_packet->check_sum = 0xffff;
-            m_packet.state = STATE_WAIT_FUNCNTION;
-            UTL::crc16_modbus_update(&rx_packet->check_sum, rx_data);
-            rx_packet->buffer[m_packet.index] = rx_data;
-            m_packet.index++;
-          }
-          break;
+            m_packet.BufferClear();
+            m_packet.node_id = rx_data;
+            UTL::crc16_modbus_update(&m_packet.checksum, rx_data);
+            m_packet.BufferAdd(rx_data);
+            m_packet.state.SetStep(STATE_WAIT_FUNCNTION);
+            break;
 
           case STATE_WAIT_FUNCNTION:
-          {
-            rx_packet->func_type = rx_data;
-            UTL::crc16_modbus_update(&rx_packet->check_sum, rx_data);
-            rx_packet->buffer[m_packet.index] = rx_data;
-            m_packet.index++;
-
+            m_packet.func_type = rx_data;
+            UTL::crc16_modbus_update(&m_packet.checksum, rx_data);
+            m_packet.BufferAdd(rx_data);
             switch (static_cast<func_e>(rx_data))
             {
-              case func_e::read_HoldingReg:
-                __attribute__((fallthrough));
+              case func_e::read_HoldingReg: __attribute__((fallthrough));
               case func_e::read_InputReg:
-                m_packet.state = STATE_WAIT_LENGTH;
+                m_packet.state.SetStep(STATE_WAIT_LENGTH);
                 break;
 
-              case func_e::write_SingleReg:  // skip break;
-                __attribute__((fallthrough));
-              case func_e::write_MultiReg:   // skip break;
-                m_packet.state = STATE_WAIT_REG_ADDR_L;
+              case func_e::write_SingleReg:  __attribute__((fallthrough));
+              case func_e::write_MultiReg:
+                m_packet.state.SetStep(STATE_WAIT_REG_ADDR_L);
                 break;
 
               default:
-                m_packet.state = STATE_WAIT_ID;
-                m_packet.index = 0;
-                m_packet.data_cnt = 0;
-                rx_packet->check_sum = 0xffff;
-                memset(&rx_packet->buffer[0], 0x00, MOONS_PACKET_BUFF_LENGTH);
-                i = data_cnt;
+                m_packet.BufferClear();
+                break;
+            }
+            // switch (static_cast<func_e>(rx_data))
+            break;
+
+              case STATE_WAIT_LENGTH:
+                m_packet.data_length = rx_data;
+                UTL::crc16_modbus_update(&m_packet.checksum, rx_data);
+                m_packet.BufferAdd(rx_data);
+                m_packet.state.SetStep(STATE_WAIT_DATA);
                 break;
 
-            } //switch (static_cast<func_e>(rx_data))
-          }
-          break;
+              case STATE_WAIT_REG_ADDR_L:
+                m_packet.reg_addr = rx_data;
+                UTL::crc16_modbus_update(&m_packet.checksum, rx_data);
+                m_packet.BufferAdd(rx_data);
+                m_packet.state.SetStep(STATE_WAIT_REG_ADDR_H);
+                break;
 
-          case STATE_WAIT_LENGTH:
-          {
-            rx_packet->data_length = rx_data;
-            m_packet.state = STATE_WAIT_DATA;
-            UTL::crc16_modbus_update(&rx_packet->check_sum, rx_data);
-            rx_packet->buffer[m_packet.index] = rx_data;
-            m_packet.index++;
-          }
-          break;
+              case STATE_WAIT_REG_ADDR_H:
+                m_packet.reg_addr |= (rx_data << 8);
+                m_packet.data_length = 2; // 0x06, 0x10 경우 2 byte;
+                UTL::crc16_modbus_update(&m_packet.checksum, rx_data);
+                m_packet.BufferAdd(rx_data);
+                m_packet.state.SetStep(STATE_WAIT_DATA);
+                break;
 
-          case STATE_WAIT_REG_ADDR_L:
-          {
-            rx_packet->reg_addr = rx_data;
-            m_packet.state = STATE_WAIT_REG_ADDR_H;
-            UTL::crc16_modbus_update(&rx_packet->check_sum, rx_data);
-            rx_packet->buffer[m_packet.index] = rx_data;
-            m_packet.index++;
-          }
-          break;
+              case STATE_WAIT_DATA:
+                if (m_packet.data_cnt++ == 0)
+                {
+                  m_packet.data = &m_packet.buffer[m_packet.buffer_idx];
+                }
+                if (m_packet.data_cnt == m_packet.data_length)
+                {
+                  m_packet.state.SetStep(STATE_WAIT_CHECKSUM_L);
+                }
+                UTL::crc16_modbus_update(&m_packet.checksum, rx_data);
+                m_packet.BufferAdd(rx_data);
+                break;
 
-          case STATE_WAIT_REG_ADDR_H:
-          {
-            rx_packet->reg_addr |= (rx_data << 8);
-            rx_packet->data_length = 2;// 0x06, 0x10 경우 2 byte;
-            m_packet.state = STATE_WAIT_DATA;
-            UTL::crc16_modbus_update(&rx_packet->check_sum, rx_data);
-            rx_packet->buffer[m_packet.index] = rx_data;
-            m_packet.index++;
-          }
-          break;
+              case STATE_WAIT_CHECKSUM_L:
+                m_packet.rx_checksum = rx_data;
+                m_packet.state.SetStep(STATE_WAIT_CHECKSUM_H);
+                m_packet.BufferAdd(rx_data);
+                break;
 
-          case STATE_WAIT_DATA:
-          {
-            if (m_packet.data_cnt++ == 0)
-            {
-              rx_packet->data = &rx_packet->buffer[m_packet.index];
-            }
-            if (m_packet.data_cnt >= rx_packet->data_length)
-            {
-              m_packet.state = STATE_WAIT_CHECKSUM_L;
-            }
-            rx_packet->buffer[m_packet.index] = rx_data;
-            m_packet.index++;
-            UTL::crc16_modbus_update(&rx_packet->check_sum, rx_data);
-          }
-          break;
-
-          case STATE_WAIT_CHECKSUM_L:
-          {
-            rx_packet->check_sum_recv = rx_data;
-            m_packet.state = STATE_WAIT_CHECKSUM_H;
-            rx_packet->buffer[m_packet.index] = rx_data;
-            m_packet.index++;
-          }
-          break;
-
-          case STATE_WAIT_CHECKSUM_H:
-          {
-            rx_packet->buffer[m_packet.index] = rx_data;
-            m_packet.index++;
-            rx_packet->check_sum_recv |= (rx_data << 8);
-            if (rx_packet->check_sum == rx_packet->check_sum_recv)
-            {
-              ret = true;
-              //buzzerBeep(1, 1);
-            }
-            m_packet.state = STATE_WAIT_ID;
-          }
-          break;
-        }//switch (m_packet.state)
-      }// for
-
-
-      return ret;
+              case STATE_WAIT_CHECKSUM_H:
+                m_packet.BufferAdd(rx_data);
+                m_packet.state.SetStep(STATE_WAIT_ID);
+                m_packet.rx_checksum |= (rx_data << 8);
+                if (m_packet.checksum == m_packet.rx_checksum)
+                  return true;
+                break;
+              default:
+                return false;
+        }
+        // end of  switch
+      }
+      //end of while
+      return false;
     }
 
   private:
     inline void receiveCplt() {
-      --m_packet.request_flag;
+      //--m_packet.request_flag;
+
+      m_reqFlag = 0;
       m_packet.resp_ms = millis() - m_packet_sending_ms;
       m_Isconnected = true;
-      uint8_t instance_no = M_GetMotorInstanceId(m_packet.rx_packet.node_id);
+
+      uint8_t instance_no = M_GetMotorInstanceId(m_packet.node_id);
       if (instance_no < m_objs.size())
       {
         if (m_func && m_objs[instance_no])
         {
-          m_func(m_objs[instance_no],&instance_no,&m_packet.rx_packet);
+          m_func(m_objs[instance_no],&instance_no,&m_packet);
         }
       }
 

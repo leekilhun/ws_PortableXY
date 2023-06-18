@@ -74,8 +74,8 @@
 #define      HW_UART_LCD            _DEF_UART3
 #define      HW_UART_LOG            _DEF_UART4
 #define _USE_HW_UART_1_DMA
-//#define _USE_HW_UART_2_DMA
-//#define _USE_HW_UART_3_DMA
+#define _USE_HW_UART_2_DMA
+#define _USE_HW_UART_3_DMA
 
 
 //#define _USE_HW_LOG

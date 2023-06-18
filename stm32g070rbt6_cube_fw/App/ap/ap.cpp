@@ -32,7 +32,7 @@ ap_io mcu_io;
 // engine layer
 MOTOR::uart_moons moons_comm;
 
-MOTOR::enMotor_moons moons_motors[AP_OBJ::MOTOR_MAX]{
+std::array<MOTOR::enMotor_moons, AP_OBJ::MOTOR_MAX> moons_motors{
   M_SetMotorId(AP_OBJ::MOTOR_X),M_SetMotorId(AP_OBJ::MOTOR_Y),M_SetMotorId(AP_OBJ::MOTOR_R)
 };
 enOp op_panel;
@@ -106,6 +106,15 @@ void  apInit(void)
     cfg.motor_param.Init();
     moons_motors[AP_OBJ::MOTOR_Y].Init(cfg);
 
+    cfg = {};
+    cfg.instance_no = AP_OBJ::MOTOR_R;
+    cfg.ptr_apReg = &mcu_reg;
+    cfg.ptr_cfgDat = &ap_cfgdata;
+    //cfg.p_apAxisDat = &axis_data;
+    cfg.ptr_comm = &moons_comm;
+    cfg.motor_param.Init();
+    moons_motors[AP_OBJ::MOTOR_R].Init(cfg);
+
   }
 
 
@@ -114,7 +123,7 @@ void  apInit(void)
     using namespace MOTOR;
 
     cnMotors::cfg_t cfg = {0,};
-    cfg.ptr_motor = moons_motors;
+    cfg.ptr_motor = moons_motors.data();
     //cfg.p_apAxisDat =  &axis_data;
     cfg.ptr_comm = &moons_comm;
     cfg.ptr_cfgDat = &ap_cfgdata;
@@ -164,7 +173,7 @@ void  apInit(void)
 
 }
 
-
+extern DMA_HandleTypeDef hdma_usart1_rx;
 void  apMain(void)
 {
   uint32_t pre_time;
@@ -172,7 +181,7 @@ void  apMain(void)
   pre_time = millis();
 
   LOG_PRINT("start! main loop");
-  LOG_PRINT("tasks size = %d",sizeof(tasks));
+  //LOG_PRINT("tasks size = %d",sizeof(tasks));
   while (1)
   {
 
@@ -180,12 +189,13 @@ void  apMain(void)
     {
       pre_time = millis();
       ledToggle(_DEF_LED1);
+      //logPrintf(">>hdma_usart1_rx.Instance->CNDTR %d \n",hdma_usart1_rx.Instance->CNDTR);
     }
 
     updateApReg();
 
     // non-block
-    //motors.ThreadJob();
+    motors.ThreadJob();
 
     // non-block�ڵ�.
     //op_lcd.ThreadJob();
@@ -401,6 +411,7 @@ void cliApp(cli_args_t *args)
     {
       cliPrintf("motor X [%d] \n", &moons_motors[0]);
       cliPrintf("motor Y [%d] \n", &moons_motors[1]);
+      cliPrintf("motor R [%d] \n", &moons_motors[2]);
       ret = true;
 
     }
@@ -416,15 +427,8 @@ void cliApp(cli_args_t *args)
     int result = 0;
     if (args->isStr(0, "motor_on") == true)
     {
-      uint8_t axis_id = (uint8_t)args->getData(1);
-      if (axis_id == 1)
-      {
-        result = moons_motors[0].MotorOnOff(true);
-      }
-      else if (axis_id == 2)
-      {
-        result = moons_motors[1].MotorOnOff(true);
-      }
+      uint8_t axis_id = constrain((uint8_t)args->getData(1), 1, 4);
+      result = moons_motors[(axis_id-1)].MotorOnOff(true);
       if (result == ERROR_SUCCESS)
       {
         cliPrintf("motor Axis[%d] On \n", axis_id);
@@ -433,20 +437,21 @@ void cliApp(cli_args_t *args)
     }
     else if (args->isStr(0, "motor_off") == true)
     {
-      uint8_t axis_id = (uint8_t)args->getData(1);
-      if (axis_id == 1)
-      {
-        result = moons_motors[0].MotorOnOff(false);
-      }
-      else if (axis_id == 2)
-      {
-        result = moons_motors[1].MotorOnOff(false);
-      }
+      uint8_t axis_id = constrain((uint8_t)args->getData(1), 1, 4);
+      result = moons_motors[(axis_id-1)].MotorOnOff(false);
       if (result == ERROR_SUCCESS)
       {
         cliPrintf("motor Axis[%d] Off \n", axis_id);
         ret = true;
       }
+    }
+    else if (args->isStr(0, "motor_state") == true)
+    {
+      uint8_t axis_idx = ((uint8_t)args->getData(1) - 1) ;
+      motors.GetMotorState((AP_OBJ::MOTOR)axis_idx);
+
+      cliPrintf("motor GetMotorState[%d] \n", axis_idx);
+      ret = true;
     }
     else if (args->isStr(0, "io_on") == true)
     {
@@ -517,6 +522,7 @@ void cliApp(cli_args_t *args)
     cliPrintf( "app io_on [0:7] \n");
     cliPrintf( "app io_off [0:7] \n");
     cliPrintf( "app motor_on [axis] \n");
+    cliPrintf( "app motor_state [0:3] \n");
     cliPrintf( "app motor_off [axis] \n");
     cliPrintf( "app oplamp [0:2] [0:1 0 off, 1 on] \n");
     cliPrintf( "app run [axis][100:0 speed][step] \n");

@@ -116,8 +116,8 @@ namespace MOTOR
 
 		struct moons_data_t {
 
-			MOONS_SS_ALARM_STATUS al_code{};
-			MOONS_SS_DRIVE_STATUS drv_status{};
+			MOONS_SS_ALARM_STATUS al_code{};  // align 4byte
+			MOONS_SS_DRIVE_STATUS drv_status{};  // align 4byte
 			uint16_t immediate_expanded_input{};
 			uint16_t driver_board_inputs{};
 			uint32_t encoder_position{};
@@ -137,14 +137,74 @@ namespace MOTOR
 			// move assignment operator
 			moons_data_t& operator=(moons_data_t&& rhs) = default;
 
+      moons_data_t make_data(const uint8_t* data, size_t size)
+      {
+        moons_data_t ret{};
+        constexpr size_t data_size = 24;
+
+        if (size == data_size)
+        {
+          std::array<uint8_t, sizeof(moons_data_t)> datas{
+            0x00, 0x00, 0x00, 0x00, // al_code
+            0x00, 0x00, 0x00, 0x00, // drv_status
+            0x00, 0x00,             // immediate_expanded_input
+            0x00, 0x00,             // driver_board_inputs
+            0x00, 0x00, 0x00, 0x00, // encoder_position
+            0x00, 0x00, 0x00, 0x00, // immediate_abs_position
+            0x00, 0x00, 0x00, 0x00, // abs_position_command
+            0x00, 0x00,             // immediate_act_velocity
+            0x00, 0x00              // immediate_target_velocity
+          };
+          datas[0] = data[1];
+          datas[1] = data[0];
+          datas[2] = 0x00;
+          datas[3] = 0x00;
+
+          datas[4] = data[3];
+          datas[5] = data[2];
+          datas[6] = 0x00;
+          datas[7] = 0x00;
+
+          datas[8] = data[5];
+          datas[9] = data[4];
+
+          datas[10] = data[7];
+          datas[11] = data[6];
+
+          datas[12] = data[11];
+          datas[13] = data[10];
+          datas[14] = data[9];
+          datas[15] = data[8];
+
+          datas[16] = data[15];
+          datas[17] = data[14];
+          datas[18] = data[13];
+          datas[19] = data[12];
+
+          datas[20] = data[19];
+          datas[21] = data[18];
+          datas[22] = data[17];
+          datas[23] = data[16];
+
+          datas[24] = data[21];
+          datas[25] = data[20];
+
+          datas[26] = data[23];
+          datas[27] = data[22];
+
+          ret = *reinterpret_cast<moons_data_t*>(datas.data());
+        }
+
+        return ret;
+      }
 		};
 
 
 		/*
-		 * modbus ������� ������ �����ʹ� �Ʒ��� ���� ó���Ѵ�
-		 * �����ӵ��� ��ǰ ������ (rps*s)�� 6���
-		 * �ӵ��� ��ǰ ������(rps)�� 240���.
-		 * rpm  4���
+		 * modbus communication is processed as follows
+		 * Acceleration and deceleration are 6 times the product data (rps*s)
+		 * The speed is 240 times the product data (rps).
+		 * rpm multiplied by 4
 		 */
 		struct motion_param_t {
 			uint32_t jog_speed{};
@@ -179,11 +239,14 @@ namespace MOTOR
 			motion_param_t& operator=(motion_param_t&& rhs) = default;
 		};
 
+
 		struct origin_param_t {
 			uint16_t accel{}; //rpss
 			uint16_t decel{}; //rpss
 			uint16_t speed{}; //rpm
 			uint32_t offset{}; //pulse cnt
+			char ccw_x_no{};
+			char cw_x_no{};
 			char home_x_no{}; // '1' ~ '5'
 			int find_home_dir{}; // 1 CW, -1 CCW
 			char home_x_level{}; //'L' Low, 'H' High, 'F' fall edge signal, 'R' rising edge signal
@@ -197,9 +260,11 @@ namespace MOTOR
 				decel = 100;
 				speed = 50;
 				offset = 10000;
-				home_x_no = '5'; // home sens
-				home_x_level = 'F';
-				find_home_dir = -1;
+				home_x_no = '5';	// home sens
+				ccw_x_no = '4';		// 
+				cw_x_no = '3';		// 
+				home_x_level = 'R';
+				find_home_dir = 1;
 			}
 
 			// copy constructor
@@ -209,10 +274,9 @@ namespace MOTOR
 			// move constructor
 			origin_param_t(origin_param_t&& rhs) = default;
 			// move assignment operator
-			origin_param_t& operator=(origin_param_t&& rhs) = default;
+			origin_param_t& operator=(origin_param_t&& rhs) = default;		
 
 		};
-
 
 		struct cfg_t {
 			origin_param_t origin_param{};
@@ -241,7 +305,7 @@ namespace MOTOR
 		cfg_t m_cfg;
 
 		uint8_t m_nodeId;
-		uart_moons::rx_packet_t m_receiveData;
+		uart_moons::packet_st m_receiveData;
 		moons_data_t m_motorData;
 		uint16_t m_commErrCnt;
 		int m_cmdDistPulse;
@@ -277,7 +341,7 @@ namespace MOTOR
 
 		}
 
-		inline uart_moons::rx_packet_t* GetPacketData() {
+		inline uart_moons::packet_st* GetPacketData() {
 			return &m_receiveData;
 		}
 
@@ -313,7 +377,7 @@ namespace MOTOR
 
 	private:
 
-		void insertData(uart_moons::rx_packet_t& data) {
+		void insertData(uart_moons::packet_st& data) {
 		  m_isReceived = true;
 			m_receiveData = data;
 			uint8_t* ptr_data = m_receiveData.data;
@@ -324,11 +388,23 @@ namespace MOTOR
 				write_MultiReg = 0x10
 			};
 
+			std::string s{};
+			for (uint8_t i = 0; i < m_receiveData.data_length; i++)
+			{
+			  //s += std::to_string(static_cast<int>(m_receiveData.data[i])) + " ";
+			  char hex[5];
+			  std::snprintf(hex, sizeof(hex), "%02X", m_receiveData.data[i]);
+			  s += hex;
+			  s += " ";
+			}
+			LOG_PRINT("packet! [%s]",s.c_str());
 			switch (m_receiveData.func_type) {
 			case read_HoldingReg:
 			{
 				if (m_receiveData.data_length == 24)
 				{
+					m_motorData = m_motorData.make_data(ptr_data, m_receiveData.data_length);
+#if 0
 					m_motorData.al_code.al_status = (uint16_t)(ptr_data[0] << 8) | (uint16_t)(ptr_data[1] << 0);
 					m_motorData.drv_status.sc_status = (uint16_t)(ptr_data[2] << 8) | (uint16_t)(ptr_data[3] << 0);
 					m_motorData.immediate_expanded_input = (uint16_t)(ptr_data[4] << 8) | (uint16_t)(ptr_data[5] << 0);
@@ -338,6 +414,9 @@ namespace MOTOR
 					m_motorData.abs_position_command = (uint32_t)(ptr_data[16] << 24) | (uint32_t)(ptr_data[17] << 16) | (uint32_t)(ptr_data[18] << 8) | (uint32_t)(ptr_data[19] << 0);
 					m_motorData.immediate_act_velocity = (uint16_t)(ptr_data[20] << 8) | (uint16_t)(ptr_data[21] << 0);
 					m_motorData.immediate_target_velocity = (uint16_t)(ptr_data[22] << 8) | (uint16_t)(ptr_data[23] << 0);
+#endif
+			   LOG_PRINT("m_motorData alarm[%d]status[%d]abs_position_cmd[%d]"
+			       ,m_motorData.al_code.al_status,m_motorData.drv_status.sc_status,m_motorData.abs_position_command);
 				}
 			}
 			break;
@@ -369,7 +448,7 @@ namespace MOTOR
 			if (w_parm == nullptr && obj == nullptr && l_parm == nullptr)
 				return;
 			//uint8_t instance_no = *((uint8_t*)w_parm);
-			ptr_this->insertData(*((uart_moons::rx_packet_t*)l_parm));
+			ptr_this->insertData(*((uart_moons::packet_st*)l_parm));
 		}
 
 	public:
@@ -545,12 +624,15 @@ namespace MOTOR
 		}
 
 		inline bool IsAlarmState() {
+		  return (m_motorData.drv_status.Alarm_present);
+#if 0
 			if (m_motorData.drv_status.Alarm_present)
 				this->m_alarmCnt++;
 			else
 				this->m_alarmCnt = 0;
 			constexpr uint16_t limit_alarm_cnt = 1000;
 			return (this->m_alarmCnt > limit_alarm_cnt ? true : false);
+#endif
 		}
 
 		inline errno_t GetMotorData() {

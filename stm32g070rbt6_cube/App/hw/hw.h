@@ -20,6 +20,8 @@ extern "C" {
 #include "led.h"
 #include "uart.h"
 #include "cli.h"
+#include "i2c.h"
+#include "gpio.h"
 
 
 

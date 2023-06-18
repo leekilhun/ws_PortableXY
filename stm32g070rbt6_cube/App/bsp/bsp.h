@@ -15,12 +15,19 @@ extern "C" {
 #endif
 
 
+
   bool bspInit(void);
   void bspDeInit(void);
   void delay(uint32_t time_ms);
   uint32_t millis(void);
   void logPrintf(const char *fmt, ...);
+  void logView(const char* file, const char* func, const int line, const char* fmt, ...);
 
+
+
+#ifndef LOG_PRINT
+#define LOG_PRINT(fmt, ...)  logView(__FILE__, __FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
+#endif
 
 #ifdef __cplusplus
 }
