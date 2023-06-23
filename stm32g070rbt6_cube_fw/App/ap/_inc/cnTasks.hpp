@@ -14,18 +14,19 @@ struct cnTasks
 {
 
   using line_t = sequece_idx_data_st::linetype_e;
-  using pos_idx_t = pos_data_st::idx_e;
   using pos_data_t = pos_data_st;
+  using pos_idx_t = pos_data_st::idx_e;
 
 
   struct cfg_t
   {
-    ap_reg* ptr_apReg;
-    enOp* ptr_op;
+    ap_reg* ptr_apReg{};
+    enOp* ptr_op{};
     MOTOR::cnMotors* ptr_motors{};
+    taskDat* ptr_taskDat{};
     //ap_log* ptr_apLog;
-    ap_io* ptr_io;
-    cnAuto* ptr_AutoManger;
+    ap_io* ptr_io{};
+    cnAuto* ptr_AutoManger{};
 
     cfg_t() = default;
     ~cfg_t() = default;
@@ -41,9 +42,9 @@ struct cnTasks
 
   };
 
-  cfg_t m_cfg;
-  prc_step_t m_step;
-  uint8_t m_idx;
+  cfg_t m_cfg{};
+  prc_step_t m_step{};
+  uint8_t m_idx{};
   std::array<sequece_idx_data_st*, line_index_max> m_lines;
   //std::array<pos_data_t, pos_idx_t::mdi_max> m_pos;
 
@@ -228,6 +229,7 @@ struct cnTasks
     {
       if (line->entry_setout)
       {
+        LOG_PRINT("entry_setout : OutputOn Set [%d]",line->entry_setout + AP_DEF_START_OUT_ADDR );
         m_cfg.ptr_io->OutputOn((uint32_t)(line->entry_setout + AP_DEF_START_OUT_ADDR));
         // io set out
       }
@@ -289,6 +291,7 @@ struct cnTasks
       }
       else
       {
+        LOG_PRINT("condition_in : IsOn Set [%d]",line->condition_in + AP_DEF_START_IN_ADDR);
         if ( m_cfg.ptr_io->IsOn((uint32_t)(line->condition_in + AP_DEF_START_IN_ADDR))) //
           m_idx = line->condition_pass_line;
         else
@@ -301,6 +304,7 @@ struct cnTasks
     {
       if (line->exit_setout)
       {
+        LOG_PRINT("line->exit_setout : OutputOn Set [%d]",line->exit_setout + AP_DEF_START_OUT_ADDR);
         // io set out
         m_cfg.ptr_io->OutputOn((uint32_t)(line->exit_setout + AP_DEF_START_OUT_ADDR));
       }
@@ -316,6 +320,17 @@ struct cnTasks
     default:
       break;
     }
+  }
+
+  inline void RunLineTask(uint8_t idx)
+  {
+    constexpr auto STEP_DO_IDX1 = 13;
+    m_idx = idx;
+    m_lines[0] =  &m_cfg.ptr_taskDat->task_dat[0].line_data;
+    m_lines[1] =  &m_cfg.ptr_taskDat->task_dat[1].line_data;
+    m_lines[2] =  &m_cfg.ptr_taskDat->task_dat[2].line_data;
+    m_lines[3] =  &m_cfg.ptr_taskDat->task_dat[3].line_data;
+    m_step.SetStep(STEP_DO_IDX1);
   }
 
 };

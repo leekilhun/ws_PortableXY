@@ -26,6 +26,10 @@ ap_reg mcu_reg;
 ap_dat ap_cfgdata;
 ap_io mcu_io;
 
+task_dat task_data;
+
+
+
 /****************************************************
   1. ap instances
  ****************************************************/
@@ -167,13 +171,57 @@ void  apInit(void)
   mcu_io.Init();
 
 
+
+  {
+
+    using type_t = sequece_idx_data_st::linetype_e;
+    using idx_t = pos_data_st::idx_e;
+
+    constexpr uint8_t data_cnt = 20/*APDAT_SEQ_CNT_MAX*/;
+
+    std::array<sequece_idx_data_st, data_cnt> line_datas = {0,};
+    LOG_PRINT("sequece_idx_data_st size [%d] , start address[0x%X]", sizeof(sequece_idx_data_st{}), flash_data_start_addr);
+    uint16_t idx = 0;
+    uint32_t pre_time = millis();
+
+    //1. earze
+    if (flashErase(flash_data_start_addr, data_cnt* APDAT_SEQ_LENGTH) == false)
+      LOG_PRINT("flash_data_start_addr[0x%X] fail length[%d] , pass ms[%d]", flash_data_start_addr, (data_cnt* APDAT_SEQ_LENGTH), millis()-pre_time  );
+    else
+    {
+      for(auto& elm: line_datas)
+      {
+        elm.idx = idx++;
+        elm.next_line = 1;
+        elm.line_type = type_t::lt_sequence;
+        elm.pos_data_idx = idx_t::mdi_null;
+        elm.entry_setout = 2;
+        elm.exit_setout = 3;
+        elm.entry_delay = 4;
+        elm.exit_delay = 5;
+        elm.condition_in = 6;
+        elm.condition_pass_line = 7;
+        elm.condition_fail_line = 8;
+
+        if (task_data.WriteData(idx++, elm) == false)
+          LOG_PRINT("WriteData fail index[%d]", (idx - 1) );
+
+      }
+      LOG_PRINT("sequece %d line data write [%d]ms", data_cnt,  millis()-pre_time);
+
+    }
+
+  }
+
 #ifdef _USE_HW_CLI
-  cliAdd("app", cliApp);
+cliAdd("app", cliApp);
 #endif
 
 }
 
-extern DMA_HandleTypeDef hdma_usart1_rx;
+
+
+
 void  apMain(void)
 {
   uint32_t pre_time;
@@ -218,6 +266,17 @@ void  apMain(void)
 
 #ifdef _USE_HW_CLI
     cliMain();
+#endif
+
+#if 0
+
+    if (uartAvailable(_DEF_UART1) > 0)
+    {
+      uint8_t rx_data;
+
+      rx_data = uartRead(_DEF_UART1);
+      uartPrintf(_DEF_UART1, "rx data : 0x%02X (%c)\n", rx_data, rx_data);
+    }
 #endif
 
   }

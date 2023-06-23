@@ -34,7 +34,6 @@ typedef struct
 
 gpio_tbl_t gpio_tbl[GPIO_MAX_CH] =
 {
-
     {SPI1_CS_GPIO_Port,     SPI1_CS_Pin,      GPIO_PIN_SET, GPIO_PIN_RESET,   _DEF_LOW, NULL},      // 0. spi ncs
     {SPI2_NSS_GPIO_Port,    SPI2_NSS_Pin,     GPIO_PIN_SET, GPIO_PIN_RESET,   _DEF_LOW, NULL},      // 1. spi nss
 
@@ -65,8 +64,8 @@ gpio_tbl_t gpio_tbl[GPIO_MAX_CH] =
     {IO_OUT7_GPIO_Port, IO_OUT7_Pin,          GPIO_PIN_SET, GPIO_PIN_RESET,   _DEF_LOW, NULL},      //25.
 
     //  i2c interrupt
-    {I2C2_INT_GPIO_Port, I2C2_INT_Pin,  GPIO_PIN_RESET, GPIO_PIN_SET,   _DEF_LOW, NULL},      // 22.
-
+    {I2C2_INT_GPIO_Port, I2C2_INT_Pin,  GPIO_PIN_RESET, GPIO_PIN_SET,   _DEF_LOW, NULL},      // .
+    {SPI1_CS_ROM_GPIO_Port,     SPI1_CS_ROM_Pin,      GPIO_PIN_SET, GPIO_PIN_RESET,   _DEF_LOW, NULL},      //  rom cs
 };
 
 

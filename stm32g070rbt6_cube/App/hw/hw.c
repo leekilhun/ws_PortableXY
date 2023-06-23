@@ -76,6 +76,10 @@ bool hwInit(void)
   ret &= i2cInit();
 #endif
 
+#ifdef _USE_HW_FLASH
+  ret &= flashInit();
+#endif
+
 
 #ifdef _USE_HW_CAN
   ret &= canInit();

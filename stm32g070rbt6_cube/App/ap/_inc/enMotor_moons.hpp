@@ -388,6 +388,7 @@ namespace MOTOR
 				write_MultiReg = 0x10
 			};
 
+#if 0
 			std::string s{};
 			for (uint8_t i = 0; i < m_receiveData.data_length; i++)
 			{
@@ -398,6 +399,7 @@ namespace MOTOR
 			  s += " ";
 			}
 			LOG_PRINT("packet! [%s]",s.c_str());
+#endif
 			switch (m_receiveData.func_type) {
 			case read_HoldingReg:
 			{
@@ -415,8 +417,8 @@ namespace MOTOR
 					m_motorData.immediate_act_velocity = (uint16_t)(ptr_data[20] << 8) | (uint16_t)(ptr_data[21] << 0);
 					m_motorData.immediate_target_velocity = (uint16_t)(ptr_data[22] << 8) | (uint16_t)(ptr_data[23] << 0);
 #endif
-			   LOG_PRINT("m_motorData alarm[%d]status[%d]abs_position_cmd[%d]"
-			       ,m_motorData.al_code.al_status,m_motorData.drv_status.sc_status,m_motorData.abs_position_command);
+			  /* LOG_PRINT("m_motorData alarm[%d]status[%d]abs_position_cmd[%d]"
+			       ,m_motorData.al_code.al_status,m_motorData.drv_status.sc_status,m_motorData.abs_position_command);*/
 				}
 			}
 			break;

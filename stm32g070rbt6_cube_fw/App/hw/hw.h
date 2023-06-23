@@ -22,6 +22,7 @@ extern "C" {
 #include "cli.h"
 #include "i2c.h"
 #include "gpio.h"
+#include "flash.h"
 
 
 

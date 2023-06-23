@@ -14,7 +14,8 @@
 /**
  * @brief Define the address of eeprom
  *
- * st24c64c - 32byte 256 page  0x0000  ~ 0x2000 *
+ * at24c64c - 32byte 256 page  0x0000  ~ 0x2000 *
+ * 64K bit (8192 x 8)
  */
 
 #define APDAT_START_ADDRESS                0x0000
@@ -26,8 +27,22 @@
 #define APDAT_END_ADDR                     APDAT_START_ADDR + (APDAT_LENGTH * APDAT_CNT_MAX)
 
 
+/*
+
+sequece_idx_data_st idx_data size = 32
+TaskEdit tasks m_step size = 72
+
+*/
+#define APDAT_SEQ_START_ADDR                   APDAT_END_ADDR
+#define APDAT_SEQ_LENGTH                       32
+#define APDAT_SEQ_ADDR(x)                      APDAT_SEQ_START_ADDR + ((x) * APDAT_SEQ_LENGTH)
+#define APDAT_SEQ_CNT_MAX                      100
+#define APDAT_SEQ_END_ADDR                     APDAT_SEQ_START_ADDR + (APDAT_SEQ_LENGTH * APDAT_SEQ_CNT_MAX)
+
+
+
 // use machine test (2 byte * 16 data)
-#define APDAT_SETUP_START_ADDR             APDAT_END_ADDR
+#define APDAT_SETUP_START_ADDR             APDAT_SEQ_END_ADDR
 #define APDAT_SETUP_DATA_LENGTH            2
 #define APDAT_SETUP_DATA_ADDR(x)           APDAT_SETUP_START_ADDR + ((x) * APDAT_SETUP_DATA_LENGTH)
 #define APDAT_SETUP_DATA_CNT_MAX           16
@@ -70,6 +85,7 @@ struct ap_dat
     apcfg_dat[idx].parm2 =rcv_data[1];
     return &apcfg_dat[idx];
   }
+
   inline dat_t* GetData(addr_e addr){
     return &apcfg_dat[addr];
   }
@@ -127,12 +143,13 @@ struct pos_data_st
   using type = AxisSystemXYZ;
   enum idx_e : uint8_t
   {
-    mdi_0,
+    mdi_null,
+    mdi_0, //matrix data index
     mdi_1,
     mdi_2,
     mdi_3,
 
-    mdi_254,
+    mdi_253,
     mdi_max // max 255
   };
 
@@ -141,9 +158,9 @@ struct pos_data_st
   /*acc dec unit =m/ss */
   // max position data 650mm
   type data{};
-  uint16_t rpm;
-  uint16_t acc;
-  uint16_t dec;
+  uint16_t rpm{};
+  uint16_t acc{};
+  uint16_t dec{};
 
   pos_data_st() = default;
   ~pos_data_st() = default;
@@ -166,6 +183,16 @@ struct pos_data_st
 };
 
 
+/*
+constexpr auto flash_total_size_kb = 128;
+constexpr auto flash_boot_size_kb = 20;
+constexpr auto flash_tag_size_kb = 1;
+constexpr auto flash_data_size_kb = 5;
+*/
+constexpr auto flash_data_start_addr = 0x0801C000;
+//int(FLASH_ADDR_START) + ( ( (flash_total_size_kb - flash_data_size_kb) - (flash_boot_size_kb + flash_tag_size_kb)) * 1024);
+//#define flash_data_start_addr              (FLASH_ADDR_START + ((128 - 5)-(20 + 1) * 1024) 0x801ec00
+#define flash_data_get_addr(x)                      flash_data_start_addr + ((x) * APDAT_SEQ_LENGTH)
 struct sequece_idx_data_st
 {
   enum linetype_e : uint8_t
@@ -178,15 +205,15 @@ struct sequece_idx_data_st
   uint16_t next_line{};
 
   linetype_e line_type{};
-  pos_data_st::idx_e pos_data_idx{};
+  pos_data_st::idx_e pos_data_idx{}; //
 
-  uint16_t entry_setout{};
-  uint16_t exit_setout{};
+  uint32_t entry_setout{};
+  uint32_t exit_setout{};
 
-  uint16_t entry_delay{}; // ms
-  uint16_t exit_delay{};  // ms
+  uint32_t entry_delay{}; // ms
+  uint32_t exit_delay{};  // ms
 
-  uint16_t condition_in{};
+  uint32_t condition_in{};
   uint16_t condition_pass_line{};
   uint16_t condition_fail_line{};
 
@@ -204,7 +231,39 @@ struct sequece_idx_data_st
 // end of sequece_idx_data_st
 
 
+struct task_dat
+{
 
+  struct dat_t
+  {
+    uint16_t  index;
+    sequece_idx_data_st  line_data;
+  };
+
+  enum idx_e :uint8_t //
+  {
+    idx_curr, idx_frnt1, idx_frnt2, idx_frnt3, idx_frnt4, _max
+  };
+
+  std::array<dat_t, _max> task_dat;
+
+  inline bool WriteData(uint16_t index, sequece_idx_data_st& data) {
+
+    if (index < APDAT_SEQ_CNT_MAX)
+    {
+      LOG_PRINT("index [%d] addr [0x%X]", index,  flash_data_get_addr(index));
+      //return at24c64Write(APDAT_SEQ_ADDR(index), (uint8_t*)&data, APDAT_SEQ_LENGTH);
+      return flashWrite(flash_data_get_addr(index), (uint8_t*)&data, APDAT_SEQ_LENGTH);
+
+    }
+    return false;
+  }
+
+  inline dat_t* ReadData(idx_e idx = idx_curr) {
+    return &task_dat[idx];
+  }
+
+};
 
 
 

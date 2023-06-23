@@ -23,7 +23,7 @@ namespace MOTOR
 #endif
 
 
-  constexpr uint8_t MOONS_RETRY_CNT_MAX = 5;
+  constexpr uint8_t MOONS_RETRY_CNT_MAX = 3;
   constexpr int MOONS_COMM_TIMEOUT = 100;
   constexpr int MOONS_PACKET_BUFF_LENGTH = 100;
   constexpr int MOONS_MULTI_WRITE_DATA_LENGTH = 10;
@@ -108,44 +108,6 @@ namespace MOTOR
     };
 
 
-    /*
-    struct rx_packet_t
-    {
-      uint8_t   node_id{};
-      uint8_t   func_type{};
-      uint16_t  reg_addr{};
-      uint16_t  reg_length{};
-      uint8_t   data_length{};
-      uint8_t*  data{};
-      uint16_t  check_sum{};
-      uint16_t  check_sum_recv{};
-      std::array <uint8_t, MOONS_PACKET_BUFF_LENGTH> buffer{};
-
-      rx_packet_t() = default;
-      ~rx_packet_t() = default;
-      // copy constructor
-      rx_packet_t(const rx_packet_t& rhs) = default;
-      // copy assignment operator
-      rx_packet_t& operator=(const rx_packet_t& rhs) = default;
-      // move constructor
-      rx_packet_t(rx_packet_t&& rhs) = default;
-      // move assignment operator
-      rx_packet_t& operator=(rx_packet_t&& rhs) = default;
-
-    };
-    struct modbus_t {
-      uint8_t   state{};
-      uint32_t  prev_ms{};
-      uint32_t  resp_ms{};
-      uint32_t  index{};
-      uint32_t  data_cnt{};
-      uint8_t   error{};
-
-      uint8_t   request_flag{};
-
-      rx_packet_t  rx_packet{};
-    };
-     */
     bool m_Isconnected;
     uint8_t   m_reqFlag{};
     cfg_t m_cfg;
@@ -281,7 +243,7 @@ namespace MOTOR
       if (m_Isconnected != true)
         return -1;
 
-/*
+      /*
   moons on
 TxData.Data : 01 06 00 7c 00 9f 08 7a
 RxData.node_id : 0x01
@@ -293,7 +255,7 @@ RxData.Data : 00 9f
  01 ff f8 b8
  1 6 0 7c 0 9f 8 7a
 
- */
+       */
       constexpr uint16_t motor_on =  159;
       constexpr uint16_t motor_off =  158;
       enum{id, fn,reg_h, reg_l, length_h, length_l, crc_l, crc_h,  _max};
@@ -320,7 +282,7 @@ RxData.Data : 00 9f
       send_data[crc_h] = (uint8_t)(crc >> 8);
 
       constexpr uint32_t timeout = 100;
-      uint8_t retray_cnt = 1; //MOONS_RETRY_CNT_MAX;
+      uint8_t retray_cnt = MOONS_RETRY_CNT_MAX;
       uint32_t ms =millis();
       while (retray_cnt)
       {
@@ -335,7 +297,7 @@ RxData.Data : 00 9f
           retray_cnt--;
         }
       }
-      Recovery();
+      //Recovery();
       LOG_PRINT("MotorOnOff comm failed");
       return -1;
       //return (SendCmd(send_data.data(), (uint32_t)send_data.size()));
@@ -1195,6 +1157,7 @@ RxData.Data : 00 9f
       m_packet_sending_ms = millis();
       ++m_reqFlag;
       //++m_packet.request_flag;
+#if 0
       std::string s{};
       for (uint8_t i = 0; i < size; i++) {
         char hex[5];
@@ -1204,6 +1167,7 @@ RxData.Data : 00 9f
       }
 
       LOG_PRINT("send packet! [%s]",s.c_str());
+#endif
       if (uartWrite(m_cfg.ch, ptr_data, size)){
         return ERROR_SUCCESS;
       }
@@ -1242,16 +1206,37 @@ RxData.Data : 00 9f
         STATE_WAIT_CHECKSUM_L,STATE_WAIT_CHECKSUM_H
       };
 
+      auto set_func = [&](auto reg)->void
+          {
+            switch (reg)
+            {
+              case read_HoldingReg: __attribute__((fallthrough));
+              case read_InputReg:
+                m_packet.state.SetStep(STATE_WAIT_LENGTH);
+                break;
+
+              case write_SingleReg:  __attribute__((fallthrough));
+              case write_MultiReg:
+                m_packet.state.SetStep(STATE_WAIT_REG_ADDR_L);
+                break;
+
+              default:
+                m_packet.BufferClear();
+                break;
+            }
+            // switch (static_cast<func_e>(rx_data))
+          };
+
       uint8_t rx_data = 0 ;
 
       if (m_packet.state.MoreThan(100))
       {
         m_packet.BufferClear();
       }
-       while (uartAvailable(m_cfg.ch))
+      while (uartAvailable(m_cfg.ch))
       {
         rx_data = uartRead(m_cfg.ch);
-        LOG_PRINT("rx_data %d", rx_data);
+        //LOG_PRINT("rx_data %d", rx_data);
 
         switch (m_packet.state.GetStep())
         {
@@ -1267,75 +1252,59 @@ RxData.Data : 00 9f
             m_packet.func_type = rx_data;
             UTL::crc16_modbus_update(&m_packet.checksum, rx_data);
             m_packet.BufferAdd(rx_data);
-            switch (static_cast<func_e>(rx_data))
-            {
-              case func_e::read_HoldingReg: __attribute__((fallthrough));
-              case func_e::read_InputReg:
-                m_packet.state.SetStep(STATE_WAIT_LENGTH);
-                break;
-
-              case func_e::write_SingleReg:  __attribute__((fallthrough));
-              case func_e::write_MultiReg:
-                m_packet.state.SetStep(STATE_WAIT_REG_ADDR_L);
-                break;
-
-              default:
-                m_packet.BufferClear();
-                break;
-            }
-            // switch (static_cast<func_e>(rx_data))
+            set_func(rx_data);
             break;
 
-              case STATE_WAIT_LENGTH:
-                m_packet.data_length = rx_data;
-                UTL::crc16_modbus_update(&m_packet.checksum, rx_data);
-                m_packet.BufferAdd(rx_data);
-                m_packet.state.SetStep(STATE_WAIT_DATA);
-                break;
+          case STATE_WAIT_LENGTH:
+            m_packet.data_length = rx_data;
+            UTL::crc16_modbus_update(&m_packet.checksum, rx_data);
+            m_packet.BufferAdd(rx_data);
+            m_packet.state.SetStep(STATE_WAIT_DATA);
+            break;
 
-              case STATE_WAIT_REG_ADDR_L:
-                m_packet.reg_addr = rx_data;
-                UTL::crc16_modbus_update(&m_packet.checksum, rx_data);
-                m_packet.BufferAdd(rx_data);
-                m_packet.state.SetStep(STATE_WAIT_REG_ADDR_H);
-                break;
+          case STATE_WAIT_REG_ADDR_L:
+            m_packet.reg_addr = rx_data;
+            UTL::crc16_modbus_update(&m_packet.checksum, rx_data);
+            m_packet.BufferAdd(rx_data);
+            m_packet.state.SetStep(STATE_WAIT_REG_ADDR_H);
+            break;
 
-              case STATE_WAIT_REG_ADDR_H:
-                m_packet.reg_addr |= (rx_data << 8);
-                m_packet.data_length = 2; // 0x06, 0x10 경우 2 byte;
-                UTL::crc16_modbus_update(&m_packet.checksum, rx_data);
-                m_packet.BufferAdd(rx_data);
-                m_packet.state.SetStep(STATE_WAIT_DATA);
-                break;
+          case STATE_WAIT_REG_ADDR_H:
+            m_packet.reg_addr |= (rx_data << 8);
+            m_packet.data_length = 2; // 0x06, 0x10 경우 2 byte;
+            UTL::crc16_modbus_update(&m_packet.checksum, rx_data);
+            m_packet.BufferAdd(rx_data);
+            m_packet.state.SetStep(STATE_WAIT_DATA);
+            break;
 
-              case STATE_WAIT_DATA:
-                if (m_packet.data_cnt++ == 0)
-                {
-                  m_packet.data = &m_packet.buffer[m_packet.buffer_idx];
-                }
-                if (m_packet.data_cnt == m_packet.data_length)
-                {
-                  m_packet.state.SetStep(STATE_WAIT_CHECKSUM_L);
-                }
-                UTL::crc16_modbus_update(&m_packet.checksum, rx_data);
-                m_packet.BufferAdd(rx_data);
-                break;
+          case STATE_WAIT_DATA:
+            if (m_packet.data_cnt++ == 0)
+            {
+              m_packet.data = &m_packet.buffer[m_packet.buffer_idx];
+            }
+            if (m_packet.data_cnt == m_packet.data_length)
+            {
+              m_packet.state.SetStep(STATE_WAIT_CHECKSUM_L);
+            }
+            UTL::crc16_modbus_update(&m_packet.checksum, rx_data);
+            m_packet.BufferAdd(rx_data);
+            break;
 
-              case STATE_WAIT_CHECKSUM_L:
-                m_packet.rx_checksum = rx_data;
-                m_packet.state.SetStep(STATE_WAIT_CHECKSUM_H);
-                m_packet.BufferAdd(rx_data);
-                break;
+          case STATE_WAIT_CHECKSUM_L:
+            m_packet.rx_checksum = rx_data;
+            m_packet.state.SetStep(STATE_WAIT_CHECKSUM_H);
+            m_packet.BufferAdd(rx_data);
+            break;
 
-              case STATE_WAIT_CHECKSUM_H:
-                m_packet.BufferAdd(rx_data);
-                m_packet.state.SetStep(STATE_WAIT_ID);
-                m_packet.rx_checksum |= (rx_data << 8);
-                if (m_packet.checksum == m_packet.rx_checksum)
-                  return true;
-                break;
-              default:
-                return false;
+          case STATE_WAIT_CHECKSUM_H:
+            m_packet.BufferAdd(rx_data);
+            m_packet.state.SetStep(STATE_WAIT_ID);
+            m_packet.rx_checksum |= (rx_data << 8);
+            if (m_packet.checksum == m_packet.rx_checksum)
+              return true;
+            break;
+          default:
+            return false;
         }
         // end of  switch
       }
@@ -1345,8 +1314,6 @@ RxData.Data : 00 9f
 
   private:
     inline void receiveCplt() {
-      //--m_packet.request_flag;
-
       m_reqFlag = 0;
       m_packet.resp_ms = millis() - m_packet_sending_ms;
       m_Isconnected = true;

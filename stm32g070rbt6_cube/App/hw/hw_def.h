@@ -22,9 +22,13 @@
 #define FLASH_ADDR_TAG              0x08005000
 #define FLASH_ADDR_FW               0x08005400
 #define FLASH_ADDR_FW_VER           0x08005800
+
+#define FLASH_ADDR_START            0x08005000
+#define FLASH_ADDR_END              (FLASH_ADDR_START + (128-20)*1024)
 /* ------------------------------------------------- */
 
 
+#define _USE_HW_FLASH
 
 #define _USE_HW_RTC
 #define _USE_HW_RESET

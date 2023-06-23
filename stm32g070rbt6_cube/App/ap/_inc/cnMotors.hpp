@@ -125,10 +125,7 @@ namespace MOTOR
         STEP_STATE_ALARM_RESET,STEP_STATE_ALARM_RESET_START,STEP_STATE_ALARM_RESET_WAIT,STEP_STATE_ALARM_RESET_END,
       };
       constexpr uint8_t step_retry_max = 3;
-
-
-      //if(m_step.MoreThan(200))
-      //  m_step.SetStep(STEP_STATE_UPDATE);
+      constexpr uint8_t comm_timeout_max = 200;
 
 
       switch(m_step.GetStep())
@@ -144,7 +141,18 @@ namespace MOTOR
         ######################################################*/
         case STEP_TODO:
         {
-          //m_step.SetStep(STEP_STATE_UPDATE);
+          if (m_cfg.ptr_comm->IsAvailableComm())
+          {
+            m_step.SetStep(STEP_STATE_UPDATE);
+            break;
+          }
+
+          //check timeout
+          if (m_step.LessThan(comm_timeout_max))
+            break;
+
+          LOG_PRINT("STEP_TODO timeout!");
+          m_step.SetStep(STEP_TIMEOUT);
         }
         break;
         /*######################################################
@@ -158,27 +166,9 @@ namespace MOTOR
             break;
           }
           else
-          {
-            //if(m_cfg.ptr_motor[m_requestMotor_idx].IsCommAlarm())
-            {
-              LOG_PRINT("STEP_TIMEOUT idx [%d] , recovery result[%d]",  m_requestMotor_idx, m_cfg.ptr_comm->Recovery());
-            }
-          }
+            LOG_PRINT("STEP_TIMEOUT idx [%d] , recovery result[%d]",  m_requestMotor_idx, m_cfg.ptr_comm->Recovery());
 
           m_step.SetStep(STEP_TODO);
-
-          /*
-          m_commStatus.comm_err |= (1 << (m_requestMotor_idx));
-          m_cfg.p_motor[m_requestMotor_idx].AddErrCnt();
-
-          if (m_commStatus.idx_0_comm_err
-              && m_commStatus.idx_1_comm_err
-              && m_commStatus.idx_2_comm_err)
-          {
-            Recovery();
-          }
-          ++m_requestMotor_idx;
-          */
         }
         break;
         /*######################################################
@@ -252,7 +242,7 @@ namespace MOTOR
 
           if (m_cfg.ptr_comm->IsAvailableComm())
           {
-            LOG_PRINT("STEP_STATE_UPDATE_WAIT response time [%dms]",m_cfg.ptr_comm->m_packet.resp_ms );
+            //LOG_PRINT("STEP_STATE_UPDATE_WAIT response time [%dms]",m_cfg.ptr_comm->m_packet.resp_ms );
 
             m_step.SetStep(STEP_STATE_UPDATE_END);
           }

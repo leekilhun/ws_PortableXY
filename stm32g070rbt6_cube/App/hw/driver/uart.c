@@ -72,6 +72,21 @@ bool uartOpen(uint8_t ch, uint32_t baud)
   {
     case _DEF_UART1:
     {
+      huart1.Init.BaudRate               = baud;
+      HAL_UART_DeInit(&huart1);
+      if (HAL_UART_Init(&huart1) != HAL_OK)
+      {
+        return false;
+      }
+      else
+      {
+        ret = true;
+        uart_tbl[ch].is_open = true;
+
+        HAL_UARTEx_SetTxFifoThreshold(&huart1, UART_TXFIFO_THRESHOLD_1_8);
+        HAL_UARTEx_SetRxFifoThreshold(&huart1, UART_RXFIFO_THRESHOLD_1_8);
+        HAL_UARTEx_DisableFifoMode(&huart1);
+      }
       ret = true;
       uart_tbl[ch].is_open = true;
       qbufferCreate(&qbuffer[ch], &uart_tbl[ch].rx_buf[0], UART_BUF_LENGTH);
@@ -88,31 +103,49 @@ bool uartOpen(uint8_t ch, uint32_t baud)
           qbuffer[ch].in  = qbuffer[ch].len - hdma_usart1_rx.Instance->CNDTR;
           qbuffer[ch].out = qbuffer[ch].in;
         }
-#else
-        if (HAL_UART_Receive_IT(&huart1, (uint8_t *)&uart_tbl[ch].rx_data, 1) != HAL_OK)
-        {
-          ret = false;
-        }
-#endif
       }
+#else
+      if (HAL_UART_Receive_IT(&huart1, (uint8_t *)&uart_tbl[ch].rx_data, 1) != HAL_OK)
+      {
+        ret = false;
+      }
+#endif
 
     }
     break;
 
     case _DEF_UART2:
     {
+      huart2.Init.BaudRate               = baud;
+      HAL_UART_DeInit(&huart2);
+      if (HAL_UART_Init(&huart2) != HAL_OK)
+      {
+        return false;
+      }
+      else
+      {
+        ret = true;
+        uart_tbl[ch].is_open = true;
+
+        HAL_UARTEx_SetTxFifoThreshold(&huart2, UART_TXFIFO_THRESHOLD_1_8);
+        HAL_UARTEx_SetRxFifoThreshold(&huart2, UART_RXFIFO_THRESHOLD_1_8);
+        HAL_UARTEx_DisableFifoMode(&huart2);
+      }
       ret = true;
       uart_tbl[ch].is_open = true;
       qbufferCreate(&qbuffer[ch], &uart_tbl[ch].rx_buf[0], UART_BUF_LENGTH);
 #ifdef _USE_HW_UART_2_DMA
-      if(HAL_UART_Receive_DMA(&huart2, (uint8_t *)&uart_tbl[ch].rx_buf[0], UART_BUF_LENGTH) != HAL_OK)
+      if (huart2.RxState == HAL_UART_STATE_READY)
       {
-        ret = false;
-      }
-      else
-      {
-        qbuffer[ch].in  = qbuffer[ch].len - hdma_usart2_rx.Instance->CNDTR;
-        qbuffer[ch].out = qbuffer[ch].in;
+        if(HAL_UART_Receive_DMA(&huart2, (uint8_t *)&uart_tbl[ch].rx_buf[0], UART_BUF_LENGTH) != HAL_OK)
+        {
+          ret = false;
+        }
+        else
+        {
+          qbuffer[ch].in  = qbuffer[ch].len - hdma_usart2_rx.Instance->CNDTR;
+          qbuffer[ch].out = qbuffer[ch].in;
+        }
       }
 #else
       if (HAL_UART_Receive_IT(&huart2, (uint8_t *)&uart_tbl[ch].rx_data, 1) != HAL_OK)
@@ -125,18 +158,36 @@ bool uartOpen(uint8_t ch, uint32_t baud)
 
     case _DEF_UART3:
     {
+      huart3.Init.BaudRate               = baud;
+      HAL_UART_DeInit(&huart3);
+      if (HAL_UART_Init(&huart3) != HAL_OK)
+      {
+        return false;
+      }
+      else
+      {
+        ret = true;
+        uart_tbl[ch].is_open = true;
+
+        HAL_UARTEx_SetTxFifoThreshold(&huart3, UART_TXFIFO_THRESHOLD_1_8);
+        HAL_UARTEx_SetRxFifoThreshold(&huart3, UART_RXFIFO_THRESHOLD_1_8);
+        HAL_UARTEx_DisableFifoMode(&huart3);
+      }
       ret = true;
       uart_tbl[ch].is_open = true;
       qbufferCreate(&qbuffer[ch], &uart_tbl[ch].rx_buf[0], UART_BUF_LENGTH);
 #ifdef _USE_HW_UART_3_DMA
-      if(HAL_UART_Receive_DMA(&huart3, (uint8_t *)&uart_tbl[ch].rx_buf[0], UART_BUF_LENGTH) != HAL_OK)
+      if (huart3.RxState == HAL_UART_STATE_READY)
       {
-        ret = false;
-      }
-      else
-      {
-        qbuffer[ch].in  = qbuffer[ch].len - hdma_usart3_rx.Instance->CNDTR;
-        qbuffer[ch].out = qbuffer[ch].in;
+        if(HAL_UART_Receive_DMA(&huart3, (uint8_t *)&uart_tbl[ch].rx_buf[0], UART_BUF_LENGTH) != HAL_OK)
+        {
+          ret = false;
+        }
+        else
+        {
+          qbuffer[ch].in  = qbuffer[ch].len - hdma_usart3_rx.Instance->CNDTR;
+          qbuffer[ch].out = qbuffer[ch].in;
+        }
       }
 #else
   if (HAL_UART_Receive_IT(&huart3, (uint8_t *)&uart_tbl[ch].rx_data, 1) != HAL_OK)
@@ -149,18 +200,36 @@ bool uartOpen(uint8_t ch, uint32_t baud)
 
     case _DEF_UART4:
     {
+      huart4.Init.BaudRate               = baud;
+      HAL_UART_DeInit(&huart4);
+      if (HAL_UART_Init(&huart4) != HAL_OK)
+      {
+        return false;
+      }
+      else
+      {
+        ret = true;
+        uart_tbl[ch].is_open = true;
+
+        HAL_UARTEx_SetTxFifoThreshold(&huart4, UART_TXFIFO_THRESHOLD_1_8);
+        HAL_UARTEx_SetRxFifoThreshold(&huart4, UART_RXFIFO_THRESHOLD_1_8);
+        HAL_UARTEx_DisableFifoMode(&huart4);
+      }
       ret = true;
       uart_tbl[ch].is_open = true;
       qbufferCreate(&qbuffer[ch], &uart_tbl[ch].rx_buf[0], UART_BUF_LENGTH);
 #ifdef _USE_HW_UART_4_DMA
-      if(HAL_UART_Receive_DMA(&huart4, (uint8_t *)&uart_tbl[ch].rx_buf[0], UART_BUF_LENGTH) != HAL_OK)
+      if (huart4.RxState == HAL_UART_STATE_READY)
       {
-        ret = false;
-      }
-      else
-      {
-        qbuffer[ch].in  = qbuffer[ch].len - hdma_usart4_rx.Instance->CNDTR;
-        qbuffer[ch].out = qbuffer[ch].in;
+        if(HAL_UART_Receive_DMA(&huart4, (uint8_t *)&uart_tbl[ch].rx_buf[0], UART_BUF_LENGTH) != HAL_OK)
+        {
+          ret = false;
+        }
+        else
+        {
+          qbuffer[ch].in  = qbuffer[ch].len - hdma_usart4_rx.Instance->CNDTR;
+          qbuffer[ch].out = qbuffer[ch].in;
+        }
       }
 #else
       if (HAL_UART_Receive_IT(&huart4, (uint8_t *)&uart_tbl[ch].rx_data, 1) != HAL_OK)

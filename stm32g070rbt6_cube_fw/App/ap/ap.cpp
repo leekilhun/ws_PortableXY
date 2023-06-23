@@ -26,6 +26,10 @@ ap_reg mcu_reg;
 ap_dat ap_cfgdata;
 ap_io mcu_io;
 
+taskDat task_data;
+
+
+
 /****************************************************
   1. ap instances
  ****************************************************/
@@ -149,6 +153,7 @@ void  apInit(void)
       cfg.ptr_apReg = &mcu_reg;
       cfg.ptr_io = &mcu_io;
       cfg.ptr_motors = &motors;
+      cfg.ptr_taskDat = &task_data;
       //cfg.p_Cyl = cyl;
       //cfg.p_Vac = vac;
       cfg.ptr_op = &op_panel;
@@ -167,13 +172,59 @@ void  apInit(void)
   mcu_io.Init();
 
 
+
+  {
+
+    using type_t = sequece_idx_data_st::linetype_e;
+    using idx_t = pos_data_st::idx_e;
+
+    constexpr uint8_t data_cnt = 20/*APDAT_SEQ_CNT_MAX*/;
+
+    std::array<sequece_idx_data_st, data_cnt> line_datas = {0,};
+    LOG_PRINT("sequece_idx_data_st size [%d] , start address[0x%X]", sizeof(sequece_idx_data_st{}), flash_data_start_addr);
+    uint16_t idx = 0;
+    uint32_t pre_time = millis();
+
+    //1. earze
+    if (flashErase(flash_data_start_addr, data_cnt* APDAT_SEQ_LENGTH) == false)
+      LOG_PRINT("flash_data_start_addr[0x%X] fail length[%d] , pass ms[%d]", flash_data_start_addr, (data_cnt* APDAT_SEQ_LENGTH), millis()-pre_time  );
+    else
+    {
+      for(auto& elm: line_datas)
+      {
+        elm.idx = idx;
+        elm.next_line = 1;
+        elm.line_type = type_t::lt_sequence;
+        elm.pos_data_idx = idx_t::mdi_null;
+        elm.entry_setout = 2;
+        elm.exit_setout = 3;
+        elm.entry_delay = 4;
+        elm.exit_delay = 5;
+        elm.condition_in = 6;
+        elm.condition_pass_line = 7;
+        elm.condition_fail_line = 8;
+
+        if (task_data.WriteData((idx), elm) == false)
+          LOG_PRINT("WriteData fail index[%d]", (idx) );
+
+        idx++;
+
+      }
+      LOG_PRINT("sequece %d line data write [%d]ms", data_cnt,  millis()-pre_time);
+
+    }
+
+  }
+
 #ifdef _USE_HW_CLI
-  cliAdd("app", cliApp);
+cliAdd("app", cliApp);
 #endif
 
 }
 
-extern DMA_HandleTypeDef hdma_usart1_rx;
+
+
+
 void  apMain(void)
 {
   uint32_t pre_time;
@@ -218,6 +269,17 @@ void  apMain(void)
 
 #ifdef _USE_HW_CLI
     cliMain();
+#endif
+
+#if 0
+
+    if (uartAvailable(_DEF_UART1) > 0)
+    {
+      uint8_t rx_data;
+
+      rx_data = uartRead(_DEF_UART1);
+      uartPrintf(_DEF_UART1, "rx data : 0x%02X (%c)\n", rx_data, rx_data);
+    }
 #endif
 
   }
@@ -425,7 +487,7 @@ void cliApp(cli_args_t *args)
   {
     
     int result = 0;
-    if (args->isStr(0, "motor_on") == true)
+    if (args->isStr(0, "mt_on") == true)
     {
       uint8_t axis_id = constrain((uint8_t)args->getData(1), 1, 4);
       result = moons_motors[(axis_id-1)].MotorOnOff(true);
@@ -435,7 +497,7 @@ void cliApp(cli_args_t *args)
         ret = true;
       }
     }
-    else if (args->isStr(0, "motor_off") == true)
+    else if (args->isStr(0, "mt_off") == true)
     {
       uint8_t axis_id = constrain((uint8_t)args->getData(1), 1, 4);
       result = moons_motors[(axis_id-1)].MotorOnOff(false);
@@ -445,14 +507,55 @@ void cliApp(cli_args_t *args)
         ret = true;
       }
     }
-    else if (args->isStr(0, "motor_state") == true)
+    else if (args->isStr(0, "mt_state") == true)
     {
-      uint8_t axis_idx = ((uint8_t)args->getData(1) - 1) ;
-      motors.GetMotorState((AP_OBJ::MOTOR)axis_idx);
+      uint8_t axis_id = constrain((uint8_t)args->getData(1), 1, 4);
+      motors.GetMotorState((AP_OBJ::MOTOR)(axis_id-1));
 
-      cliPrintf("motor GetMotorState[%d] \n", axis_idx);
+      cliPrintf("motor GetMotorState[%d] \n", (axis_id-1));
       ret = true;
     }
+    else if (args->isStr(0, "mt_show") == true)
+    {
+      uint8_t axis_id = constrain((uint8_t)args->getData(1), 1, 4);
+      MOTOR::enMotor_moons::moons_data_t* ptr_data =  &moons_motors[(axis_id-1)].m_motorData;
+      cliPrintf( "motor id[%d] \n", (axis_id));
+      cliPrintf( "motor al_code [%d] \n",ptr_data->al_code.al_status );
+      cliPrintf( "motor drv_status [%d] \n",ptr_data->drv_status.sc_status);
+      cliPrintf( "motor driver_board_inputs [%d] \n",ptr_data->al_code.al_status);
+      cliPrintf( "motor driver_board_inputs [%d] \n",ptr_data->driver_board_inputs);
+      cliPrintf( "motor encoder_position [%d] \n",ptr_data->encoder_position);
+      cliPrintf( "motor immediate_abs_position [%d] \n",ptr_data->immediate_abs_position);
+      cliPrintf( "motor abs_position_command [%d] \n",ptr_data->abs_position_command);
+      ret = true;
+    }
+    else if (args->isStr(0, "line_run") == true)
+    {
+      uint16_t line_idx = args->getData(1);
+      if (task_data.ReadData())
+      {
+        tasks.RunLineTask(line_idx);
+        for (auto&[i, dat]  : task_data.task_dat)
+        {
+          cliPrintf("line : idx[%d]\tnext_line[%d]\tline_type[%d]\tpos_idx[%d]\ten_out[%d]\tex_out\n"
+              ,  dat.idx, dat.next_line, dat.line_type, dat.pos_data_idx, dat.entry_setout, dat.exit_setout );
+
+        }
+       /* for (auto& elm : task_data.task_dat)
+        {
+          cliPrintf("line : idx[%d]\tnext_line[%d]\tline_type[%d]\tpos_idx[%d]\ten_out[%d]\tex_out\n"
+              ,  elm.line_data.idx, elm.line_data.next_line, elm.line_data.line_type, elm.line_data.pos_data_idx, elm.line_data.entry_setout, elm.line_data.exit_setout );
+
+        }*/
+
+        cliPrintf("line_run [%d] \n", line_idx);
+        ret = true;
+      }
+      else
+      {
+        cliPrintf("line_run ReadData fail \n");
+      }
+         }
     else if (args->isStr(0, "io_on") == true)
     {
       uint8_t idx = (uint8_t)args->getData(1);
@@ -521,9 +624,11 @@ void cliApp(cli_args_t *args)
     cliPrintf( "app io_in \n");
     cliPrintf( "app io_on [0:7] \n");
     cliPrintf( "app io_off [0:7] \n");
-    cliPrintf( "app motor_on [axis] \n");
-    cliPrintf( "app motor_state [0:3] \n");
-    cliPrintf( "app motor_off [axis] \n");
+    cliPrintf( "app mt_on [axis] \n");
+    cliPrintf( "app mt_off [axis] \n");
+    cliPrintf( "app mt_state [axis] \n");
+    cliPrintf( "app mt_show [axis] \n");
+    cliPrintf( "app line_run [idx] \n");
     cliPrintf( "app oplamp [0:2] [0:1 0 off, 1 on] \n");
     cliPrintf( "app run [axis][100:0 speed][step] \n");
     cliPrintf( "app rel [axis][100:0 speed][step] \n");
