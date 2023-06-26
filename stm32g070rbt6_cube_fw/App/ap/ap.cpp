@@ -495,6 +495,7 @@ void updateErr()
 
 
 #ifdef _USE_HW_CLI
+
 void cliApp(cli_args_t *args)
 {
   bool ret = false;
