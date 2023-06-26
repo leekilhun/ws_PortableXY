@@ -107,7 +107,7 @@ namespace MOTOR
       m_step.SetStep(4);
     }
 
-    // step machine을 통해 nonblock으로 처리된다.
+    //
     inline void ThreadJob()
     {
       doRunStep();
@@ -126,7 +126,7 @@ namespace MOTOR
       };
       constexpr uint8_t step_retry_max = 3;
       constexpr uint8_t comm_timeout_max = 200;
-
+      constexpr uint32_t step_wait_delay = 20;
 
       switch(m_step.GetStep())
       {
@@ -160,13 +160,16 @@ namespace MOTOR
         ######################################################*/
         case STEP_TIMEOUT:
         {
-          if (m_cfg.ptr_motor[m_requestMotor_idx].IsAlarmState())
+          if (m_cfg.ptr_motor[m_requestMotor_idx].IsCommAlarm())
           {
             m_step.SetStep(STEP_STATE_ALARM_RESET);
             break;
           }
           else
+          {
+            SetCommStatus((AP_OBJ::MOTOR)m_requestMotor_idx, true);
             LOG_PRINT("STEP_TIMEOUT idx [%d] , recovery result[%d]",  m_requestMotor_idx, m_cfg.ptr_comm->Recovery());
+          }
 
           m_step.SetStep(STEP_TODO);
         }
@@ -180,28 +183,18 @@ namespace MOTOR
           m_step.wait_step = 0;
           m_step.retry_cnt = 0;
 
-          // 1. set request motor id ( 1 > 2 > 3 > 1 > 2 > 3)
-          /*
-          for(uint8_t i = 0; i <(uint8_t)AP_OBJ::MOTOR_MAX; ++i)
-          {
-            bool check = m_cfg.ptr_motor[i].m_motorData.al_code.al_status == 0;
-            check &=  m_cfg.ptr_motor[i].m_isReceived;
-          }
-          */
-
-          /*
-
-
-            TxData.Data : 01 03 00 00 00 0c 45 cf
-            RxData.node_id : 0x01
-            RxData.func_type : 0x03
-            RxData.data_length : 0x18
-            RxData.Data : 00 00 00 09 00 00 00 ff 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-
-           */
-
           m_requestMotor_idx = m_requestMotor_idx % AP_OBJ::MOTOR_MAX;
           m_step.SetStep(STEP_STATE_UPDATE_START);
+
+          /*
+           check is_comm_alarm state  -> comm_reset.
+           */
+          if (m_cfg.ptr_motor[m_requestMotor_idx].IsCommAlarm())
+          {
+            LOG_PRINT("STEP_STATE_UPDATE_START idx [%d],al_code[%d]",m_requestMotor_idx, m_cfg.ptr_motor[m_requestMotor_idx].m_motorData.al_code);
+            m_step.SetStep(STEP_STATE_ALARM_RESET);
+          }
+
         }
         break;
 
@@ -214,24 +207,6 @@ namespace MOTOR
             LOG_PRINT("STEP_STATE_UPDATE_START GetMotorData failed! idx [%d]",  m_requestMotor_idx);
             m_step.SetStep(STEP_TIMEOUT);
           }
-
-
-          //m_step.wait_resp = true;
-          /*
-          if (m_cfg.p_comm->IsAvailableComm() == false)
-          {
-            if (m_step.LessThan(COMM_TIMEOUT_MAX))
-              break;
-
-            m_step.SetStep(STEP_TIMEOUT);
-            break;
-          }
-
-          if (m_cfg.p_motor[m_requestMotor_idx].GetMotorData()== ERROR_SUCCESS)
-            m_step.SetStep(STEP_STATE_UPDATE_WAIT);
-          else
-            m_step.SetStep(STEP_TIMEOUT);
-            */
         }
         break;
 
@@ -241,11 +216,7 @@ namespace MOTOR
             break;
 
           if (m_cfg.ptr_comm->IsAvailableComm())
-          {
-            //LOG_PRINT("STEP_STATE_UPDATE_WAIT response time [%dms]",m_cfg.ptr_comm->m_packet.resp_ms );
-
             m_step.SetStep(STEP_STATE_UPDATE_END);
-          }
           else
           {
             if (m_step.retry_cnt++ < step_retry_max)
@@ -262,31 +233,16 @@ namespace MOTOR
 
         case STEP_STATE_UPDATE_END:
         {
-
-          m_step.SetStep(STEP_TODO);
-          break;
- /*
-          m_commStatus.comm_err &= ~(1 << (m_requestMotor_idx));
-
-          if (m_cfg.p_motor[m_requestMotor_idx].IsCommAlarm())
-          {
-            m_motorCommErrCnt[m_requestMotor_idx]++;
-            m_step.SetStep(STEP_RESET_COMM_ALARM);
-            break;
-          }
-
+          SetCommStatus((AP_OBJ::MOTOR)m_requestMotor_idx, false);
           ++m_requestMotor_idx;
-          */
-          if (m_requestMotor_idx == AP_OBJ::MOTOR_R )
+
+          if (m_requestMotor_idx == AP_OBJ::MOTOR_MAX )
           {
             m_requestMotor_idx = 0;
             m_step.SetStep(STEP_TODO);
           }
           else
-          {
-            ++m_requestMotor_idx;
-            m_step.SetStep(STEP_STATE_UPDATE_START);
-          }
+            m_step.SetStep(STEP_STATE_UPDATE);
 
         }
         break;
@@ -300,58 +256,27 @@ namespace MOTOR
           m_step.wait_step = 0;
           m_step.retry_cnt = 0;
 
-          m_requestMotor_idx = 0;
-          m_step.SetStep(STEP_STATE_ALARM_RESET_END);
-          for(uint8_t i = 0; i <(uint8_t)AP_OBJ::MOTOR_MAX; ++i)
-          {
-           if(m_cfg.ptr_motor[i].IsCommAlarm())
-           {
-             m_requestMotor_idx = i;
-             m_step.SetStep(STEP_STATE_ALARM_RESET_START);
-             i = (uint8_t)AP_OBJ::MOTOR_MAX;
-           }
-          }
+          m_step.SetStep(STEP_STATE_ALARM_RESET_START);
         }
         break;
 
         case STEP_STATE_ALARM_RESET_START:
         {
+          if(m_step.LessThan(step_wait_delay))
+            break;
 
+          LOG_PRINT("STEP_STATE_ALARM_RESET_START m_requestMotor_idx[%d]",m_requestMotor_idx );
           m_cfg.ptr_motor[m_requestMotor_idx].ResetAlarmNon();
-          LOG_PRINT("STEP_TIMEOUT idx [%d]",  m_requestMotor_idx);
           m_step.SetStep(STEP_STATE_ALARM_RESET_WAIT);
         }
         break;
 
         case STEP_STATE_ALARM_RESET_WAIT:
         {
-          if(m_step.LessThan(100))
+          if(m_step.LessThan(step_wait_delay))
             break;
 
-          /*
-
-            TxData.Data        : 01 06 00 7c 00 ba c9 a1
-            RxData.node_id     : 0x01
-            RxData.func_type   : 0x06
-            RxData.data_length : 0x02
-            RxData.Data        : 00 ba
-
-
-           */
-
-          m_requestMotor_idx = 0;
           m_step.SetStep(STEP_STATE_ALARM_RESET_END);
-          for(uint8_t i = 0; i <(uint8_t)AP_OBJ::MOTOR_MAX; ++i)
-          {
-            if(m_cfg.ptr_motor[i].IsCommAlarm())
-            {
-              m_requestMotor_idx = i;
-              m_step.SetStep(STEP_STATE_ALARM_RESET_START);
-              i = (uint8_t)AP_OBJ::MOTOR_MAX;
-            }
-          }
-
-
         }
         break;
 
@@ -367,6 +292,21 @@ namespace MOTOR
       }
       // end of switch
 
+    }
+
+
+    inline uint8_t SetCommStatus(AP_OBJ::MOTOR motor_id, bool set_err = true)
+    {
+      if ( set_err )
+        m_commStatus.comm_err |= 1 << (int)motor_id;
+      else
+        m_commStatus.comm_err &=  ~(1<< (int)motor_id);
+      return m_commStatus.comm_err;
+    }
+
+
+    inline uint8_t GetCommStatus() const{
+      return m_commStatus.comm_err;
     }
 
 
@@ -389,9 +329,7 @@ namespace MOTOR
       return false;
     }
 
-    inline uint8_t GetCommStatus() const{
-      return m_commStatus.comm_err;
-    }
+
 
     inline uint8_t AddErrCnt() {
       //m_commStatus.comm_err= 0;
@@ -491,7 +429,7 @@ namespace MOTOR
     inline bool IsLinkMoveCplt(){
       bool ret = true;
       ret = m_cfg.p_motor[AP_OBJ::MOTOR_JIG].IsInPose()
-               &m_cfg.p_motor[AP_OBJ::MOTOR_ROLL].IsInPose();
+                       &m_cfg.p_motor[AP_OBJ::MOTOR_ROLL].IsInPose();
       return ret;
     }
 
@@ -735,8 +673,8 @@ namespace MOTOR
       {
         bool ret = true;
         ret = m_cfg.p_motor[AP_OBJ::MOTOR_JIG].IsMotorOn()
-                 &m_cfg.p_motor[AP_OBJ::MOTOR_HIGH].IsMotorOn()
-                 &m_cfg.p_motor[AP_OBJ::MOTOR_ROLL].IsMotorOn();
+                         &m_cfg.p_motor[AP_OBJ::MOTOR_HIGH].IsMotorOn()
+                         &m_cfg.p_motor[AP_OBJ::MOTOR_ROLL].IsMotorOn();
         return ret;
       }
       return m_cfg.p_motor[motor_id].IsMotorOn();
@@ -747,8 +685,8 @@ namespace MOTOR
       {
         bool ret = true;
         ret = m_cfg.p_motor[AP_OBJ::MOTOR_JIG].IsMotorRun()
-                 &m_cfg.p_motor[AP_OBJ::MOTOR_HIGH].IsMotorRun()
-                 &m_cfg.p_motor[AP_OBJ::MOTOR_ROLL].IsMotorRun();
+                         &m_cfg.p_motor[AP_OBJ::MOTOR_HIGH].IsMotorRun()
+                         &m_cfg.p_motor[AP_OBJ::MOTOR_ROLL].IsMotorRun();
         return ret;
       }
       return m_cfg.p_motor[motor_id].IsMotorRun();
@@ -757,8 +695,8 @@ namespace MOTOR
     inline bool IsMotorHomingAnyOne(){
       bool ret = true;
       ret = m_cfg.p_motor[AP_OBJ::MOTOR_JIG].IsMotorHoming()
-               |m_cfg.p_motor[AP_OBJ::MOTOR_HIGH].IsMotorHoming()
-               |m_cfg.p_motor[AP_OBJ::MOTOR_ROLL].IsMotorHoming();
+                       |m_cfg.p_motor[AP_OBJ::MOTOR_HIGH].IsMotorHoming()
+                       |m_cfg.p_motor[AP_OBJ::MOTOR_ROLL].IsMotorHoming();
       return ret;
     }
 
@@ -767,8 +705,8 @@ namespace MOTOR
       {
         bool ret = false;
         ret = m_cfg.p_motor[AP_OBJ::MOTOR_JIG].IsMotorHoming()
-                       |m_cfg.p_motor[AP_OBJ::MOTOR_HIGH].IsMotorHoming()
-                       |m_cfg.p_motor[AP_OBJ::MOTOR_ROLL].IsMotorHoming();
+                               |m_cfg.p_motor[AP_OBJ::MOTOR_HIGH].IsMotorHoming()
+                               |m_cfg.p_motor[AP_OBJ::MOTOR_ROLL].IsMotorHoming();
         return ret;
       }
       return m_cfg.p_motor[motor_id].IsMotorHoming();
@@ -779,8 +717,8 @@ namespace MOTOR
       {
         bool ret = true;
         ret = m_cfg.p_motor[AP_OBJ::MOTOR_JIG].IsMotorStop()
-                 &m_cfg.p_motor[AP_OBJ::MOTOR_HIGH].IsMotorStop()
-                 &m_cfg.p_motor[AP_OBJ::MOTOR_ROLL].IsMotorStop();
+                         &m_cfg.p_motor[AP_OBJ::MOTOR_HIGH].IsMotorStop()
+                         &m_cfg.p_motor[AP_OBJ::MOTOR_ROLL].IsMotorStop();
         return ret;
       }
       return m_cfg.p_motor[motor_id].IsMotorStop();
@@ -795,8 +733,8 @@ namespace MOTOR
       {
         bool ret = true;
         ret = m_cfg.p_motor[AP_OBJ::MOTOR_JIG].IsInPose()
-                       &m_cfg.p_motor[AP_OBJ::MOTOR_HIGH].IsInPose()
-                       &m_cfg.p_motor[AP_OBJ::MOTOR_ROLL].IsInPose();
+                               &m_cfg.p_motor[AP_OBJ::MOTOR_HIGH].IsInPose()
+                               &m_cfg.p_motor[AP_OBJ::MOTOR_ROLL].IsInPose();
         return ret;
       }
       return m_cfg.p_motor[motor_id].IsInPose();

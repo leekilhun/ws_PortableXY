@@ -358,7 +358,9 @@ namespace MOTOR
 		}
 
 		inline errno_t ResetAlarmNon(){
+		  m_motorData.al_code.al_status = 0;
 		  return m_cfg.ptr_comm->ResetAlarmNon(m_nodeId);
+
 		}
 
 		/*
@@ -616,25 +618,12 @@ namespace MOTOR
 				return ret;
 		}
 
-		inline void Recovery() {
-			m_commErrCnt = 0;
-		}
-
-
 		inline bool IsCommAlarm() const {
 			return m_motorData.al_code.Comm_Error;
 		}
 
 		inline bool IsAlarmState() {
-		  return (m_motorData.drv_status.Alarm_present);
-#if 0
-			if (m_motorData.drv_status.Alarm_present)
-				this->m_alarmCnt++;
-			else
-				this->m_alarmCnt = 0;
-			constexpr uint16_t limit_alarm_cnt = 1000;
-			return (this->m_alarmCnt > limit_alarm_cnt ? true : false);
-#endif
+		  return (m_motorData.al_code.al_status != 0);
 		}
 
 		inline errno_t GetMotorData() {

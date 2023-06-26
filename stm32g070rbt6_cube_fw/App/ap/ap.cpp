@@ -228,6 +228,9 @@ cliAdd("app", cliApp);
 void  apMain(void)
 {
   uint32_t pre_time;
+  uint32_t blink_time;
+  constexpr uint32_t no_error_blink_time = 1'000;
+  constexpr uint32_t error_blink_time = 300;
 
   pre_time = millis();
 
@@ -236,7 +239,14 @@ void  apMain(void)
   while (1)
   {
 
-    if (millis()-pre_time >= 1000)
+
+    /* set led blink time */
+    if (mcu_reg.error_reg.no_error)
+      blink_time = no_error_blink_time;
+    else
+      blink_time = error_blink_time;
+
+    if (millis()-pre_time >= blink_time)
     {
       pre_time = millis();
       ledToggle(_DEF_LED1);
@@ -457,6 +467,28 @@ void updateApReg()
  */
 void updateErr()
 {
+  /* 3. motor communication */
+  if (motors.GetCommStatus() == 0)
+  {
+    mcu_reg.error_reg.no_resp_mot = false;
+  }
+  else
+  {
+    mcu_reg.error_reg.no_resp_mot = true;
+  }
+
+
+
+
+
+
+  if (mcu_reg.error_reg.ap_error > 1)
+  {
+    mcu_reg.error_reg.no_error = false;
+  }
+  else
+    mcu_reg.error_reg.no_error = true;
+
 
 }
 
