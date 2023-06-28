@@ -27,7 +27,7 @@ ap_dat ap_cfgdata;
 ap_io mcu_io;
 
 taskDat task_data;
-
+mcu_data_st mcu_data;
 
 
 /****************************************************
@@ -35,10 +35,18 @@ taskDat task_data;
  ****************************************************/
 // engine layer
 MOTOR::uart_moons moons_comm;
+RCTRL::uart_remote remote_comm;
+
+#ifdef APP_USE_MOTOR_R
 
 std::array<MOTOR::enMotor_moons, AP_OBJ::MOTOR_MAX> moons_motors{
   M_SetMotorId(AP_OBJ::MOTOR_X),M_SetMotorId(AP_OBJ::MOTOR_Y),M_SetMotorId(AP_OBJ::MOTOR_R)
 };
+#else
+std::array<MOTOR::enMotor_moons, AP_OBJ::MOTOR_MAX> moons_motors{
+  M_SetMotorId(AP_OBJ::MOTOR_X),M_SetMotorId(AP_OBJ::MOTOR_Y)
+};//,M_SetMotorId(AP_OBJ::MOTOR_R)
+#endif
 enOp op_panel;
 
 
@@ -49,6 +57,8 @@ cnTasks tasks;
 MOTOR::cnMotors motors;
 
 
+// user interface.
+api_remote remote_pc;
 
 
 void  apInit(void)
@@ -71,9 +81,17 @@ void  apInit(void)
     moons_comm.Init(cfg);
   }
 
+  {
+    using namespace RCTRL;
+    uart_remote::cfg_t cfg{};
+    cfg.ch = HW_UART_PC;
+    cfg.baud = 115200;
+    remote_comm.Init(cfg);
+  }
+
   /* operating panel sw initial */
   {
-    enOp::cfg_t cfg = {0,};
+    enOp::cfg_t cfg = {};
     cfg.ptr_mcu_io      = &mcu_io;
     cfg.ptr_mcu_reg     = &mcu_reg;
     cfg.sw_pin_start    = _GPIO_OP_SW_START;
@@ -110,6 +128,7 @@ void  apInit(void)
     cfg.motor_param.Init();
     moons_motors[AP_OBJ::MOTOR_Y].Init(cfg);
 
+#ifdef APP_USE_MOTOR_R
     cfg = {};
     cfg.instance_no = AP_OBJ::MOTOR_R;
     cfg.ptr_apReg = &mcu_reg;
@@ -118,7 +137,7 @@ void  apInit(void)
     cfg.ptr_comm = &moons_comm;
     cfg.motor_param.Init();
     moons_motors[AP_OBJ::MOTOR_R].Init(cfg);
-
+#endif
   }
 
 
@@ -126,7 +145,7 @@ void  apInit(void)
   {
     using namespace MOTOR;
 
-    cnMotors::cfg_t cfg = {0,};
+    cnMotors::cfg_t cfg = {};
     cfg.ptr_motor = moons_motors.data();
     //cfg.p_apAxisDat =  &axis_data;
     cfg.ptr_comm = &moons_comm;
@@ -138,7 +157,7 @@ void  apInit(void)
 
   /* automanager initial */
   {
-    cnAuto::cfg_t auto_cfg = {0, };
+    cnAuto::cfg_t auto_cfg = {};
     auto_cfg.ptr_apReg = &mcu_reg;
     //auto_cfg.p_apLog = &mcu_log;
     auto_cfg.ptr_op =&op_panel;
@@ -149,7 +168,7 @@ void  apInit(void)
 
   /* task jos initial */
   {
-      cnTasks::cfg_t cfg = {0, };
+      cnTasks::cfg_t cfg = {};
       cfg.ptr_apReg = &mcu_reg;
       cfg.ptr_io = &mcu_io;
       cfg.ptr_motors = &motors;
@@ -168,6 +187,25 @@ void  apInit(void)
     }
 
 
+  /*remote control and monitor*/
+    {
+      api_remote::cfg_t cfg{};
+      cfg.ptr_auto = &autoManager;
+      cfg.ptr_boot_info = nullptr;
+      cfg.ptr_firm_info = nullptr;
+      cfg.ptr_cfg_data = &ap_cfgdata;
+      cfg.ptr_comm = &remote_comm;
+      cfg.ptr_io = &mcu_io;
+      cfg.ptr_mcu_data = &mcu_data;
+      cfg.ptr_mcu_reg = &mcu_reg;
+      cfg.ptr_motors = &motors;
+      cfg.ptr_task = &tasks;
+
+      remote_pc.Init(cfg);
+    }
+
+
+
   /*Assign Obj */
   mcu_io.Init();
 
@@ -180,7 +218,7 @@ void  apInit(void)
 
     constexpr uint8_t data_cnt = 20/*APDAT_SEQ_CNT_MAX*/;
 
-    std::array<sequece_idx_data_st, data_cnt> line_datas = {0,};
+    std::array<sequece_idx_data_st, data_cnt> line_datas = {};
     LOG_PRINT("sequece_idx_data_st size [%d] , start address[0x%X]", sizeof(sequece_idx_data_st{}), flash_data_start_addr);
     uint16_t idx = 0;
     uint32_t pre_time = millis();
@@ -262,7 +300,7 @@ void  apMain(void)
     //op_lcd.ThreadJob();
 
     // non-block�ڵ�
-    //remote_pc.ThreadJob();
+    remote_pc.ThreadJob();
 
     // non-block�ڵ�
     tasks.ThreadJob();
@@ -460,6 +498,39 @@ void updateApReg()
   //mcu_reg.SetReg_State(reg::MOTOR_ON, motors.IsMotorOn());
   //mcu_reg.SetReg_State(reg::SYSTEM_INIT_COMPLETED, tasks.IsInitailzed());
 
+  enum :uint8_t {io_1d,io_2d,io_3d, io_max};
+  enum :uint8_t {motor_1d,motor_2d,motor_3d,motor_4d, motor_max};
+  enum :uint8_t {data_1d,data_2d,data_3d,data_4d, data_max};
+  mcu_data.reg_sys = mcu_io.m_sysio.system_io;
+  mcu_data.reg_state = mcu_reg.state_reg.ap_state;
+  mcu_data.reg_option = mcu_reg.option_reg.ap_option;
+  mcu_data.reg_err = mcu_reg.error_reg.ap_error;
+  mcu_data.io_in[io_1d] = mcu_io.m_in.data;
+  mcu_data.io_in[io_2d] = 0;
+  mcu_data.io_in[io_3d] = 0;
+  mcu_data.io_out[io_1d] = mcu_io.m_out.data;
+  mcu_data.io_out[io_2d] = 0;
+  mcu_data.io_out[io_3d] = 0;
+  mcu_data.motor_cnt= (uint16_t)AP_OBJ::MOTOR_MAX;
+  mcu_data.motor_pulse[motor_1d] = moons_motors[AP_OBJ::MOTOR_X].m_motorData.encoder_position;//500'000;
+  mcu_data.motor_status[motor_1d] = moons_motors[AP_OBJ::MOTOR_X].m_motorData.drv_status.sc_status;
+  mcu_data.motor_pulse[motor_2d] = moons_motors[AP_OBJ::MOTOR_Y].m_motorData.encoder_position;
+  mcu_data.motor_status[motor_2d] = moons_motors[AP_OBJ::MOTOR_Y].m_motorData.drv_status.sc_status;
+#ifdef APP_USE_MOTOR_R
+  mcu_data.motor_pulse[motor_3d] = moons_motors[AP_OBJ::MOTOR_R].m_motorData.encoder_position;//2'500'000;
+  mcu_data.motor_status[motor_3d] = moons_motors[AP_OBJ::MOTOR_R].m_motorData.drv_status.sc_status;
+#else
+  mcu_data.motor_pulse[motor_3d] = 0;
+  mcu_data.motor_status[motor_3d] = 0;
+#endif
+  mcu_data.motor_pulse[motor_4d] = 0;
+  mcu_data.motor_status[motor_4d] = 0;
+  //mcu_data.datas[data_1d] = 134'217'728;
+  //mcu_data.datas[data_2d] = 2'281'736'192;
+  //mcu_data.datas[data_3d] = 2'290'124'928;
+  //mcu_data.datas[data_4d] = 2'290'649'224;
+
+
 }
 
 /*
@@ -495,6 +566,7 @@ void updateErr()
 
 
 #ifdef _USE_HW_CLI
+
 void cliApp(cli_args_t *args)
 {
   bool ret = false;

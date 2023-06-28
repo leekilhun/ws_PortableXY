@@ -46,6 +46,13 @@ bool hwInit(void)
   ret &= ledInit();
 #endif
 
+#ifdef _USE_HW_RTC
+  ret &=rtcInit();
+#endif
+#ifdef _USE_HW_RESET
+  ret &= resetInit();
+#endif
+
 #ifdef _USE_HW_UART
   ret &= uartInit();
 #endif

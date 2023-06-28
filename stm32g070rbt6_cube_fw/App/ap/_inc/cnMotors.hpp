@@ -27,11 +27,11 @@ namespace MOTOR
   public:
     struct cfg_t  {
       //axis_dat* p_apAxisDat;
-      ap_reg* ptr_apReg;
-      enMotor_moons *ptr_motor;
-      uart_moons *ptr_comm;
-      ap_io *ptr_io;
-      ap_dat* ptr_cfgDat;
+      ap_reg* ptr_apReg{};
+      enMotor_moons *ptr_motor{};
+      uart_moons *ptr_comm{};
+      ap_io *ptr_io{};
+      ap_dat* ptr_cfgDat{};
 
       cfg_t() = default;
 
@@ -119,7 +119,7 @@ namespace MOTOR
 
     inline void doRunStep()
     {
-      enum {
+      enum : uint8_t {
         STEP_INIT,STEP_TODO,STEP_TIMEOUT,STEP_RESET_COMM_ALARM,
         STEP_STATE_UPDATE,STEP_STATE_UPDATE_START,STEP_STATE_UPDATE_WAIT,STEP_STATE_UPDATE_END,
         STEP_STATE_ALARM_RESET,STEP_STATE_ALARM_RESET_START,STEP_STATE_ALARM_RESET_WAIT,STEP_STATE_ALARM_RESET_END,

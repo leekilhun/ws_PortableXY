@@ -231,7 +231,7 @@ struct sequece_idx_data_st
 // end of sequece_idx_data_st
 
 
-struct task_dat
+struct taskDat
 {
 
   struct dat_t
@@ -251,7 +251,7 @@ struct task_dat
 
     if (index < APDAT_SEQ_CNT_MAX)
     {
-      LOG_PRINT("index [%d] addr [0x%X]", index,  flash_data_get_addr(index));
+      //LOG_PRINT("index [%d] addr [%d]", index,  flash_data_get_addr(index));
       //return at24c64Write(APDAT_SEQ_ADDR(index), (uint8_t*)&data, APDAT_SEQ_LENGTH);
       return flashWrite(flash_data_get_addr(index), (uint8_t*)&data, APDAT_SEQ_LENGTH);
 
@@ -259,13 +259,43 @@ struct task_dat
     return false;
   }
 
-  inline dat_t* ReadData(idx_e idx = idx_curr) {
-    return &task_dat[idx];
+  inline bool ReadData() {
+    return flashRead(flash_data_get_addr(0), (uint8_t*)task_dat.data(), task_dat.size() * APDAT_SEQ_LENGTH);
   }
 
 };
 
 
+
+constexpr auto mcu_data_io_dword_max = 3;
+constexpr auto mcu_data_motor_dword_max = 4;
+constexpr auto mcu_data_data_dword_max = 4;
+//max 72 byte
+
+struct mcu_data_st
+{
+  uint16_t reg_state{}; //
+  uint32_t reg_option{}; //
+  uint32_t reg_err{}; //
+  std::array < uint32_t, mcu_data_io_dword_max> io_in{};//
+  std::array < uint32_t, mcu_data_io_dword_max> io_out{};//
+  uint16_t motor_cnt{};//
+  std::array < uint32_t, mcu_data_motor_dword_max> motor_pulse{};//
+  std::array < uint32_t, mcu_data_data_dword_max> datas{};
+
+
+  mcu_data_st() = default;
+
+  ~mcu_data_st() = default;
+  // copy constructor
+  mcu_data_st(const mcu_data_st& rhs) = default;
+  // copy assignment operator
+  mcu_data_st& operator=(const mcu_data_st& rhs) = default;
+  // move constructor
+  mcu_data_st(mcu_data_st&& rhs) = default;
+  // move assignment operator
+  mcu_data_st& operator=(mcu_data_st&& rhs) = default;
+};
 
 
 

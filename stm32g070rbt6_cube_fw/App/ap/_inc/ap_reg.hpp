@@ -319,11 +319,30 @@ struct ap_reg
     MODE_AUTO,
     NOT_USE_MOTOR,
     NOT_USE_LCD,
+
+
+    OPTION_20,
+    OPTION_21,
+    OPTION_22,
+    OPTION_23,
+    OPTION_24,
+    OPTION_25,
+    OPTION_26,
+    OPTION_27,
+
+    OPTION_30,
+    OPTION_31,
+    OPTION_32,
+    OPTION_33,
+    OPTION_34,
+    OPTION_35,
+    OPTION_36,
+    OPTION_37,
   };
 
   union AP_OPT_REG
   {
-    uint16_t ap_option{};
+    uint32_t ap_option{};
     struct
     {
       unsigned use_beep : 1;
@@ -343,6 +362,24 @@ struct ap_reg
       unsigned mode_auto : 1;
       unsigned not_use_motor : 1;
       unsigned not_use_lcd : 1;
+
+      unsigned option_20 : 1;
+      unsigned option_21 : 1;
+      unsigned option_22 : 1;
+      unsigned option_23 : 1;
+      unsigned option_24 : 1;
+      unsigned option_25 : 1;
+      unsigned option_26 : 1;
+      unsigned option_27 : 1;
+
+      unsigned option_30 : 1;
+      unsigned option_31 : 1;
+      unsigned option_32 : 1;
+      unsigned option_33 : 1;
+      unsigned option_34 : 1;
+      unsigned option_35 : 1;
+      unsigned option_36 : 1;
+      unsigned option_37 : 1;
     };
   };
 
@@ -417,7 +454,7 @@ struct ap_reg
     state_reg.ap_state = data;
   }
 
-  inline void SetOptionRegister(uint16_t data) {
+  inline void SetOptionRegister(uint32_t data) {
     option_reg.ap_option = data;
   }
 

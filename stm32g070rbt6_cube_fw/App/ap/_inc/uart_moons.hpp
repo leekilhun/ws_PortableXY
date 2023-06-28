@@ -1211,11 +1211,13 @@ RxData.Data : 00 9f
             switch (reg)
             {
               case read_HoldingReg: __attribute__((fallthrough));
+              /* no break */
               case read_InputReg:
                 m_packet.state.SetStep(STATE_WAIT_LENGTH);
                 break;
 
               case write_SingleReg:  __attribute__((fallthrough));
+              /* no break */
               case write_MultiReg:
                 m_packet.state.SetStep(STATE_WAIT_REG_ADDR_L);
                 break;

@@ -21,10 +21,11 @@
 #define errno_t int
 #endif
 
-
 #ifndef ERROR_SUCCESS
 #define ERROR_SUCCESS 0
 #endif
+
+#define  APP_USE_MOTOR_R
 
 #include "def_obj.hpp"
 

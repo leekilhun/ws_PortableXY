@@ -23,6 +23,8 @@ extern "C" {
 #include "i2c.h"
 #include "gpio.h"
 #include "flash.h"
+#include "rtc.h"
+#include "reset.h"
 
 
 
