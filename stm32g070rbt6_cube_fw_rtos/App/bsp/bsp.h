@@ -10,6 +10,10 @@
 
 #include "def.h"
 
+#ifdef _USE_HW_RTOS
+#include "cmsis_os.h"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

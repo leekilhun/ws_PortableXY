@@ -1,0 +1,30 @@
+{
+	"folders": [
+		{
+			"path": "stm32g070-portablexy-fw_rtos"
+		}
+	],
+  "settings":  {
+    "cmake.generator": "MinGW Makefiles",
+    "cmake.configureArgs": [
+        "-DARM_TOOLCHAIN_DIR=C:/tools/gcc-arm-none-eabi-9-2020-q2-update-win32/bin",
+        "-DCMAKE_MAKE_PROGRAM=C:/tools/mingw32/bin"
+        //"-DARM_TOOLCHAIN_DIR=C:/DevSoft/arm-tools/gcc-arm-none-eabi-10.3-2021.10/bin",
+        //"-DCMAKE_MAKE_PROGRAM=C:/DevSoft/arm-tools/mingw32/bin"
+        //"-DARM_TOOLCHAIN_DIR=C:/tools/build_tools/gcc-arm-none-eabi-10.3-2021.10/bin",
+		//"-DCMAKE_MAKE_PROGRAM=c:/tools/build_tools/mingw32/bin"
+    ],	
+    "terminal.integrated.env.windows": {  
+			"ARM_TOOLCHAIN_DIR":"c:/tools/gcc-arm-none-eabi-9-2020-q2-update-win32/bin",
+			"PATH": "${env:PATH};C:/tools/mingw32/bin",	
+			//"PATH": "${env:PATH};c:/DevSoft/arm-tools/mingw32/bin;",	
+		 	//"ARM_TOOLCHAIN_DIR":"C:/DevSoft/arm-tools/gcc-arm-none-eabi-10.3-2021.10/bin",	
+			},
+    "files.autoSave": "onFocusChange",
+    "editor.fontFamily": "D2Coding,Consolas, 'Courier New', monospace",
+    "editor.tabSize": 2,
+    "files.associations": {
+      "array": "cpp"
+    }
+  }
+}
