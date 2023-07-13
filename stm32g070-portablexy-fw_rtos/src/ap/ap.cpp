@@ -48,6 +48,7 @@ mcu_data_st mcu_data;
 // engine layer
 MOTOR::uart_moons moons_comm;
 RCTRL::uart_remote remote_comm;
+NXLCD::uart_nextion nextion_comm;
 
 #ifdef APP_USE_MOTOR_R
 
@@ -72,7 +73,7 @@ MOTOR::cnMotors motors;
 // user interface.
 api_remote remote_pc;
 
-
+api_lcd op_lcd;
 
 void  apInit(void)
 {
@@ -122,74 +123,77 @@ void  apInit(void)
       {
         LOG_PRINT("threadCLi : Fail");
       }
-
-
     }
 
-
 #ifdef _USE_HW_CLI
-  if(cliOpen(HW_UART_LCD, 115200))
-    LOG_PRINT("cliOpen Success! ch[%d], baud[%d]",HW_UART_LCD, 115200);
-  else
-    LOG_PRINT("cliOpen Fail! ch[%d], baud[%d] \n",HW_UART_LCD, 115200);
+    if (cliOpen(HW_UART_LCD, 115200))
+      LOG_PRINT("cliOpen Success! ch[%d], baud[%d]", HW_UART_LCD, 115200);
+    else
+      LOG_PRINT("cliOpen Fail! ch[%d], baud[%d] \n", HW_UART_LCD, 115200);
+#else
+    {
+      using namespace NXLCD;
+      uart_nextion::cfg_t cfg{};
+      cfg.ch = HW_UART_LCD;
+      cfg.baud = 115200;
+      nextion_lcd.Init(cfg);
+    }
 #endif
 
+    // uart
+    {
+      using namespace MOTOR;
+      uart_moons::cfg_t cfg{};
+      cfg.ch = HW_UART_MOTOR;
+      cfg.baud = 115200;
+      moons_comm.Init(cfg);
+    }
 
-  // uart
-  {
-    using namespace MOTOR;
-    uart_moons::cfg_t cfg{};
-    cfg.ch = HW_UART_MOTOR;
-    cfg.baud = 115200;
-    moons_comm.Init(cfg);
-  }
+    {
+      using namespace RCTRL;
+      uart_remote::cfg_t cfg{};
+      cfg.ch = HW_UART_PC;
+      cfg.baud = 115200;
+      remote_comm.Init(cfg);
+    }
 
-  {
-    using namespace RCTRL;
-    uart_remote::cfg_t cfg{};
-    cfg.ch = HW_UART_PC;
-    cfg.baud = 115200;
-    remote_comm.Init(cfg);
-  }
+    /* operating panel sw initial */
+    {
+      enOp::cfg_t cfg = {};
+      cfg.ptr_mcu_io = &mcu_io;
+      cfg.ptr_mcu_reg = &mcu_reg;
+      cfg.sw_pin_start = _GPIO_OP_SW_START;
+      cfg.sw_pin_stop = _GPIO_OP_SW_STOP;
+      cfg.sw_pin_reset = _GPIO_OP_SW_RESET;
+      cfg.sw_pin_estop = _GPIO_OP_SW_ESTOP;
 
-  /* operating panel sw initial */
-  {
-    enOp::cfg_t cfg = {};
-    cfg.ptr_mcu_io      = &mcu_io;
-    cfg.ptr_mcu_reg     = &mcu_reg;
-    cfg.sw_pin_start    = _GPIO_OP_SW_START;
-    cfg.sw_pin_stop     = _GPIO_OP_SW_STOP;
-    cfg.sw_pin_reset    = _GPIO_OP_SW_RESET;
-    cfg.sw_pin_estop    = _GPIO_OP_SW_ESTOP;
+      cfg.lamp_pin_start = _GPIO_OP_LAMP_START;
+      cfg.lamp_pin_stop = _GPIO_OP_LAMP_STOP;
+      cfg.lamp_pin_reset = _GPIO_OP_LAMP_RESET;
+      op_panel.Init(cfg);
+    }
 
-    cfg.lamp_pin_start  = _GPIO_OP_LAMP_START;
-    cfg.lamp_pin_stop   = _GPIO_OP_LAMP_STOP;
-    cfg.lamp_pin_reset  = _GPIO_OP_LAMP_RESET;
-    op_panel.Init(cfg);
-  }
+    /* motor initial */
+    {
+      using namespace MOTOR;
 
-  /* motor initial */
-  {
-    using namespace MOTOR;
+      enMotor_moons::cfg_t cfg{};
+      cfg.instance_no = AP_OBJ::MOTOR_X;
+      cfg.ptr_apReg = &mcu_reg;
+      cfg.ptr_cfgDat = &ap_cfgdata;
+      // cfg.p_apAxisDat = &axis_data;
+      cfg.ptr_comm = &moons_comm;
+      cfg.motor_param.Init();
+      moons_motors[AP_OBJ::MOTOR_X].Init(cfg);
 
-    enMotor_moons::cfg_t cfg { };
-    cfg.instance_no = AP_OBJ::MOTOR_X;
-    cfg.ptr_apReg = &mcu_reg;
-    cfg.ptr_cfgDat = &ap_cfgdata;
-    //cfg.p_apAxisDat = &axis_data;
-    cfg.ptr_comm = &moons_comm;
-    cfg.motor_param.Init();
-    moons_motors[AP_OBJ::MOTOR_X].Init(cfg);
-
-
-    cfg = {};
-    cfg.instance_no = AP_OBJ::MOTOR_Y;
-    cfg.ptr_apReg = &mcu_reg;
-    cfg.ptr_cfgDat = &ap_cfgdata;
-    //cfg.p_apAxisDat = &axis_data;
-    cfg.ptr_comm = &moons_comm;
-    cfg.motor_param.Init();
-    moons_motors[AP_OBJ::MOTOR_Y].Init(cfg);
+      cfg = {};
+      cfg.instance_no = AP_OBJ::MOTOR_Y;
+      cfg.ptr_apReg = &mcu_reg;
+      cfg.ptr_cfgDat = &ap_cfgdata;
+      // cfg.p_apAxisDat = &axis_data;
+      cfg.ptr_comm = &moons_comm;
+      cfg.motor_param.Init();
+      moons_motors[AP_OBJ::MOTOR_Y].Init(cfg);
 
 #ifdef APP_USE_MOTOR_R
     cfg = {};
@@ -249,7 +253,21 @@ void  apInit(void)
       tasks.Init(cfg);
     }
 
+#ifndef _USE_HW_CLI
+    {
+      api_lcd::cfg_t cfg{};
+      cfg.ptr_auto = &autoManager;
+      cfg.ptr_cfg_data = &ap_cfgdata;
+      cfg.ptr_comm = &remote_comm;
+      cfg.ptr_io = &mcu_io;
+      cfg.ptr_mcu_data = &mcu_data;
+      cfg.ptr_mcu_reg = &mcu_reg;
+      cfg.ptr_motors = &motors;
+      cfg.ptr_task = &tasks;
 
+      op_lcd.Init(cfg);
+    }
+#endif
   /*remote control and monitor*/
     {
       api_remote::cfg_t cfg{};
