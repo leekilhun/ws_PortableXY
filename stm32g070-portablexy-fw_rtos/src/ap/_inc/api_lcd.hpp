@@ -46,6 +46,7 @@ public:
   bool m_IsInit;
   cfg_t m_cfg;
   NXLCD::uart_nextion::packet_st m_receiveData;
+  NXLCD::uart_nextion::page_e m_currPage;
   bool m_waitReplyOK;
   bool m_OkReply;
 
@@ -56,7 +57,7 @@ public:
    *  Constructor
    ****************************************************/
 public:
-  api_lcd(): m_IsInit{}, m_cfg{},m_receiveData{}/*, m_txBuffer{}*/
+  api_lcd(): m_IsInit{}, m_cfg{},m_receiveData{},m_currPage{}/*, m_txBuffer{}*/
   , m_waitReplyOK{}, m_OkReply{}
   , m_step{}, m_elaps{}{
 
@@ -88,6 +89,7 @@ public:
     m_cfg = cfg;
     cfg.ptr_comm->AttCallbackFunc(this, receiveDataFunc);
     m_IsInit = true;
+    LOG_PRINT("Init Success! ");
     return ERROR_SUCCESS;
   }
 
@@ -104,6 +106,8 @@ public:
 
   //sends mcu status information
   void PcUpdate();
+
+  void LcdUpdate();
 
   errno_t SendData(NXLCD::TX_TYPE type, uint8_t obj_id = 0);
 

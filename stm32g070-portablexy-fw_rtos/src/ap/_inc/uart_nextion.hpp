@@ -79,6 +79,7 @@ namespace NXLCD
     CMD_CTRL_MOT_VEL_JOG              = 0x2C,
 
     CMD_CTRL_BKCMD                    = 0xAA,
+    CMD_RET_CURR_PAGE_NO   				    = 0xB0,
     CMD_CTRL_REQ_BEEP                 = 0xBB,
   };
 
@@ -107,6 +108,37 @@ namespace NXLCD
 
   struct uart_nextion
   {
+    	/*
+		– Level 0 is Off – no pass/fail will be returned
+		– Level 1 is OnSuccess, only when last serial command successful.
+		– Level 2 is OnFailure, only when last serial command failed
+		– Level 3 is Always, returns 0x00 to 0x23 result of serial command.
+		 */
+		enum bkCMdLevel
+		{
+			NO_RETURN,
+			ONLY_SUCCESS,
+			ONLY_FAIL,
+			ALWAYS_RETURN,
+		};
+
+		enum page_e : uint8_t
+		{
+			INIT = 0,
+			MAIN = 1,
+			MANUAL = 2,
+			TEACH = 3,
+			IO = 4,
+			LOG = 5,
+			SETUP = 6,
+			TASK = 7,
+			SELTTEST = 8,
+      ALARM = 10,
+      CONFIRM = 11,
+			page_max
+		};
+
+
     /****************************************************
      *  data
      ****************************************************/
@@ -247,7 +279,8 @@ namespace NXLCD
       switch (tx_cmd)
       {
       case TX_MCU_DATA:
-        /* code */
+         m_packet_sending_ms = millis();
+        return ((uartWrite(m_cfg.ch, ptr_data, length) > 0) ? true : false);
         break;
 
       case TX_MOTOR_DATA:
@@ -345,12 +378,16 @@ namespace NXLCD
             m_packet.state.SetStep(STATE_WAIT_TYPE);
             break;
 
-
           case STATE_WAIT_TYPE:
             m_packet.type = rx_data;
             m_packet.BufferAdd(rx_data);
             UTL::crc16_modbus_update(&m_packet.checksum, rx_data);
             m_packet.state.SetStep(STATE_WAIT_OBJ_ID);
+
+            if (rx_data == CMD_TYPE::CMD_RET_CURR_PAGE_NO)
+              m_packet.state.SetStep(STATE_WAIT_CHECKSUM_L);
+            else if (rx_data == CMD_TYPE::CMD_CTRL_REQ_BEEP)
+              return true;
             break;
 
           case STATE_WAIT_OBJ_ID:

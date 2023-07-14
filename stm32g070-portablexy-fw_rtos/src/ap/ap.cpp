@@ -112,7 +112,7 @@ void  apInit(void)
         LOG_PRINT("threadTask : Fail");
       }
 
-
+#ifdef _USE_HW_CLI
       /**/
       osThreadDef(threadCli, threadCli, _HW_DEF_RTOS_THREAD_PRI_CLI, 0, _HW_DEF_RTOS_THREAD_MEM_CLI);
       if (osThreadCreate(osThread(threadCli), NULL) != NULL)
@@ -123,6 +123,8 @@ void  apInit(void)
       {
         LOG_PRINT("threadCLi : Fail");
       }
+#endif
+
     }
 
 #ifdef _USE_HW_CLI
@@ -136,7 +138,7 @@ void  apInit(void)
       uart_nextion::cfg_t cfg{};
       cfg.ch = HW_UART_LCD;
       cfg.baud = 115200;
-      nextion_lcd.Init(cfg);
+      nextion_comm.Init(cfg);
     }
 #endif
 
@@ -258,7 +260,7 @@ void  apInit(void)
       api_lcd::cfg_t cfg{};
       cfg.ptr_auto = &autoManager;
       cfg.ptr_cfg_data = &ap_cfgdata;
-      cfg.ptr_comm = &remote_comm;
+      cfg.ptr_comm = &nextion_comm;
       cfg.ptr_io = &mcu_io;
       cfg.ptr_mcu_data = &mcu_data;
       cfg.ptr_mcu_reg = &mcu_reg;
@@ -452,6 +454,7 @@ void threadCmd(void const *argument)
   UNUSED(argument);
   while (1)
   {
+    op_lcd.ThreadJob();
     remote_pc.ThreadJob();
     motors.ThreadJob();
 
@@ -468,6 +471,7 @@ void threadReceiveNonBlock(void const *argument)
 
   while (1)
   {
+    nextion_comm.ReceiveProcess();
     remote_comm.ReceiveProcess();
     moons_comm.ReceiveProcess();
 

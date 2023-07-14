@@ -25,7 +25,7 @@ extern "C" {
 #include "flash.h"
 #include "rtc.h"
 #include "reset.h"
-
+#include "buzzer.h"
 
 
 bool hwInit(void);

@@ -88,6 +88,7 @@ public:
     m_cfg = cfg;
     cfg.ptr_comm->AttCallbackFunc(this, receiveDataFunc);
     m_IsInit = true;
+    LOG_PRINT("Init Success! ");
     return ERROR_SUCCESS;
   }
 

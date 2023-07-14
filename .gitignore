@@ -28,6 +28,7 @@ build
 *.elf
 *.map
 *.json
+*.code-workspace
 
 ## 폴더 무시
 cmake/
@@ -42,3 +43,4 @@ Release/
 Templates/
 _htmresc/
 .imgs/
+.vscode/

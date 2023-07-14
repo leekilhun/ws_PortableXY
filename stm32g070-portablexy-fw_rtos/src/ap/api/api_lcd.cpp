@@ -11,13 +11,45 @@
 #include "ap.hpp"
 #include "api_lcd.hpp"
 
-     
+  enum : uint8_t
+  {
+    STEP_INIT,
+    STEP_TODO,
+    STEP_TIMEOUT,
+    STEP_RESET_COMM_ALARM,
+    STEP_STATE_UPDATE,
+    STEP_STATE_UPDATE_START,
+    STEP_STATE_UPDATE_WAIT,
+    STEP_STATE_UPDATE_END,
+  };     
 
 errno_t api_lcd::SendData(NXLCD::TX_TYPE type, uint8_t obj_id )
 {
- 
+  uint16_t length = 0;
+  enum :uint8_t {
+    idx_type,  
+    idx_length_l,idx_length_h,
+    idx_data
+  };
+  std::array<uint8_t, NXLCD::CMD_MAX_PACKET_LENGTH> value = { };
+  using tx_t = NXLCD::TX_TYPE;
+  value[idx_type] = type;
+  switch (type)
+  {
+    case tx_t::TX_MCU_DATA:
+      length = sizeof(*(m_cfg.ptr_mcu_data));
+      value[idx_length_l] = (uint8_t)(length >> 0);
+      value[idx_length_h] = (uint8_t)(length >> 8);
+      std::memcpy(&value[idx_data],(uint8_t*)m_cfg.ptr_mcu_data, length);
+      break;    
 
-  return m_cfg.ptr_comm->SendNextionData(type, nullptr, 0 );
+    case tx_t::TX_OK_RESPONSE:
+    default:
+      break;
+  }
+  //end of switch
+
+  return m_cfg.ptr_comm->SendNextionData(type, value.data(), length + 1 );
 }
 
 
@@ -35,10 +67,6 @@ void api_lcd::doRunStep()
 {
   using tx_t = NXLCD::TX_TYPE;
 
-  enum : uint8_t {
-    STEP_INIT,STEP_TODO,STEP_TIMEOUT,STEP_RESET_COMM_ALARM,
-    STEP_STATE_UPDATE,STEP_STATE_UPDATE_START,STEP_STATE_UPDATE_WAIT,STEP_STATE_UPDATE_END,
-  };
   constexpr uint8_t step_retry_max = 3;
   constexpr uint32_t step_wait_delay = 50;
 
@@ -142,17 +170,7 @@ void api_lcd::ProcessCmd(NXLCD::uart_nextion::packet_st& data)
   this->m_receiveData = data;
   using cmd_t = NXLCD::CMD_TYPE;
   //using tx_t = NXLCD::TX_TYPE;
-  enum : uint8_t
-  {
-    STEP_INIT,
-    STEP_TODO,
-    STEP_TIMEOUT,
-    STEP_RESET_COMM_ALARM,
-    STEP_STATE_UPDATE,
-    STEP_STATE_UPDATE_START,
-    STEP_STATE_UPDATE_WAIT,
-    STEP_STATE_UPDATE_END,
-  };
+
 
   /*
 
@@ -196,7 +214,12 @@ void api_lcd::ProcessCmd(NXLCD::uart_nextion::packet_st& data)
       break;
   case cmd_t::CMD_CTRL_BKCMD:
       break;
+  case cmd_t::CMD_RET_CURR_PAGE_NO:
+      LcdUpdate();
+      break;
   case cmd_t::CMD_CTRL_REQ_BEEP:
+      if (m_cfg.ptr_mcu_reg->option_reg.use_beep)
+        buzzerBeep(1, 2);
       break;
 
   default:
@@ -204,3 +227,62 @@ void api_lcd::ProcessCmd(NXLCD::uart_nextion::packet_st& data)
   }
   // end of switch
 }
+
+
+
+// mcu 상태 정보를 보낸다
+void api_lcd::LcdUpdate(){
+	using PAGE = NXLCD::uart_nextion::page_e;
+
+	if (m_cfg.ptr_mcu_reg->state_reg.auto_ready
+			 || m_cfg.ptr_auto->IsModeAuto())
+	{
+		if (m_currPage !=PAGE::MAIN)
+		{
+			//ChangePage(PAGE::MAIN);
+		}
+	}
+  else if (m_cfg.ptr_mcu_reg->state_reg.alarm_status)
+  {
+  	//if (m_currPage != PAGE::ALARM)
+  		//ChangePage(PAGE::ALARM);
+  }
+
+  switch (m_currPage)
+  {
+  case PAGE::INIT:
+    __attribute__((fallthrough));
+  case PAGE::SETUP:
+    m_step.msgQ.Put(STEP_STATE_UPDATE);
+    break;
+
+  case PAGE::MAIN:
+    __attribute__((fallthrough));
+  case PAGE::MANUAL:
+    __attribute__((fallthrough));
+  case PAGE::TASK:
+    break;
+
+  case PAGE::TEACH:
+    break;
+
+  case PAGE::IO:
+    break;
+
+  case PAGE::LOG:
+    break;
+
+  case PAGE::SELTTEST:
+    break;
+
+  case PAGE::ALARM:
+    break;
+
+  default:
+    break;
+  }
+}
+
+
+
+

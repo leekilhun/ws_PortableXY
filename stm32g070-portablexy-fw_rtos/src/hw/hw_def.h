@@ -105,7 +105,7 @@
 #define      HW_LOG_BOOT_BUF_MAX    1024
 #define      HW_LOG_LIST_BUF_MAX    2048
 
-#define _USE_HW_CLI
+//#define _USE_HW_CLI
 #define      HW_CLI_CMD_LIST_MAX    16
 #define      HW_CLI_CMD_NAME_MAX    16
 #define      HW_CLI_LINE_HIS_MAX    4

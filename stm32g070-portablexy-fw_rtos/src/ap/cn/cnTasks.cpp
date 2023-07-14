@@ -146,7 +146,7 @@ void cnTasks::doRunStep(uint8_t idx)
           m_step.wait_step = 8;
           break;
 #ifdef APP_USE_MOTOR_R
-        case AP_OBJ::MOTOR_HIGH:__attribute__((fallthrough));
+        case AP_OBJ::MOTOR_R:__attribute__((fallthrough));
 #endif
         case AP_OBJ::MOTOR_MAX:__attribute__((fallthrough));
         default:
@@ -514,16 +514,16 @@ void cnTasks::doRunStep(uint8_t idx)
         else
             m_step.wait_step = 0;
         break;
-      case prc_move_to_limit_x:
-        m_step.wait_step = prc_org_x;
+      case prc_move_to_limit_r:
+        m_step.wait_step = prc_org_r;
         break;
-      case prc_org_x:
-        m_step.wait_step = prc_org_reset_x;
+      case prc_org_r:
+        m_step.wait_step = prc_org_reset_r;
         break;
-      case prc_org_reset_x:
-        m_step.wait_step = prc_move_ready_x;
+      case prc_org_reset_r:
+        m_step.wait_step = prc_move_ready_r;
         break;
-      case prc_move_ready_x:
+      case prc_move_ready_r:
         m_step.wait_step = 0;
         break;
 #else

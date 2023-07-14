@@ -25,7 +25,7 @@
 #define ERROR_SUCCESS 0
 #endif
 
-//#define  APP_USE_MOTOR_R
+#define  APP_USE_MOTOR_R
 
 #include "def_obj.hpp"
 

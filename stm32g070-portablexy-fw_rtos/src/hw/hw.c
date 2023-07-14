@@ -61,6 +61,10 @@ bool hwInit(void)
   ret &= gpioInit();
 #endif
 
+#ifdef _USE_HW_BUTTON
+  ret &= buttonInit();
+#endif
+
 #ifdef _USE_HW_LOG
   ret &= logInit();
 
