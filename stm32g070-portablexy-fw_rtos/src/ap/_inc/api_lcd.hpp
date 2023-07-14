@@ -48,7 +48,7 @@ public:
   NXLCD::uart_nextion::packet_st m_receiveData;
   NXLCD::uart_nextion::page_e m_currPage;
   bool m_waitReplyOK;
-  bool m_OkReply;
+  bool m_modeReparse;
 
   prc_step_t m_step;
   uint32_t m_elaps;
@@ -58,7 +58,7 @@ public:
    ****************************************************/
 public:
   api_lcd(): m_IsInit{}, m_cfg{},m_receiveData{},m_currPage{}/*, m_txBuffer{}*/
-  , m_waitReplyOK{}, m_OkReply{}
+  , m_waitReplyOK{}, m_modeReparse{}
   , m_step{}, m_elaps{}{
 
   };

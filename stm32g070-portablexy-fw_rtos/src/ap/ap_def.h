@@ -25,6 +25,10 @@
 #define ERROR_SUCCESS 0
 #endif
 
+#ifndef ERROR_FAIL
+#define ERROR_FAIL -1
+#endif
+
 #define  APP_USE_MOTOR_R
 
 #include "def_obj.hpp"

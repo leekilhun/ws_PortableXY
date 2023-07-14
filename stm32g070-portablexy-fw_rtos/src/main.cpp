@@ -5,12 +5,22 @@
  *      Author: gns2l
  */
 
-
-
-
 #include "main.h"
 
+#ifndef _USE_HW_RTOS
 
+int main(void)
+{
+  bspInit();
+  hwInit();
+  exhwInit();
+  apInit();
+  apMain();
+
+  return 0;
+}
+
+#else
 
 static void mainThread(void const *argument);
 
@@ -47,3 +57,7 @@ void mainThread(void const *argument)
   apMain();
 
 }
+
+
+
+#endif

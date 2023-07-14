@@ -94,7 +94,7 @@ void logView(const char* file, const char* func, const int line, const char* fmt
   strcpy(tmp_str, file);
   char* arg_tbl[ARG_TBL_CNT_MAX];
   memset(arg_tbl,0, ARG_TBL_CNT_MAX);
-  uint8_t arg_cnt = utilParseArgs(tmp_str, arg_tbl, "/", ARG_TBL_CNT_MAX);
+  uint8_t arg_cnt = utilParseArgs(tmp_str, arg_tbl, "/\\", ARG_TBL_CNT_MAX);
 
   va_list args;
   char buf[256];
@@ -108,7 +108,7 @@ void logView(const char* file, const char* func, const int line, const char* fmt
 
 void SystemClock_Config(void)
 {
-	 LL_FLASH_SetLatency(LL_FLASH_LATENCY_2);
+	LL_FLASH_SetLatency(LL_FLASH_LATENCY_2);
   while(LL_FLASH_GetLatency() != LL_FLASH_LATENCY_2)
   {
   }
@@ -148,7 +148,7 @@ void SystemClock_Config(void)
   /* Update CMSIS variable (which can be updated also through SystemCoreClockUpdate function) */
   LL_SetSystemCoreClock(64000000);
 
-  /* Update the time base */
+   /* Update the time base */
   if (HAL_InitTick (TICK_INT_PRIORITY) != HAL_OK)
   {
     Error_Handler();

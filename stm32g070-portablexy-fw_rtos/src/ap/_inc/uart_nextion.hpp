@@ -271,7 +271,7 @@ namespace NXLCD
     }
 
 
-    inline bool SendNextionData(TX_TYPE tx_cmd, uint8_t* ptr_data, uint32_t length)
+    inline bool SendNextionData(TX_TYPE tx_cmd, uint8_t* ptr_data, uint32_t length = 0)
     {
       constexpr int NEXTION_PACKET_BUFF_LENGTH = 32;
       std::array<uint8_t, NEXTION_PACKET_BUFF_LENGTH> temp = {0, };
@@ -288,12 +288,12 @@ namespace NXLCD
         break;
 
       case TX_LCD_BKCMDLEVEL:
-        sprintf((char *)temp.data(), "bkcmd=%d", (*(int *)ptr_data));
+        sprintf((char *)temp.data(), "bkcmd=%d", (int)(*ptr_data));
         ret = true;
         break;
 
       case TX_LCD_START_REPARSEMODE:
-        sprintf((char *)temp.data(), "recmod=%d", (*(int *)ptr_data));
+        sprintf((char *)temp.data(), "recmod=%d", (int)(*ptr_data));
         ret = true;
         break;
 
@@ -303,7 +303,7 @@ namespace NXLCD
         break;
 
       case TX_LCD_CHANGE_PAGE:
-        sprintf((char *)temp.data(), "page %d", (*(int *)ptr_data));
+        sprintf((char *)temp.data(), "page %d", (int)(*ptr_data));
         ret = true;
         break;
 

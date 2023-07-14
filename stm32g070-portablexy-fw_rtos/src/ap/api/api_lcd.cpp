@@ -49,7 +49,7 @@ errno_t api_lcd::SendData(NXLCD::TX_TYPE type, uint8_t obj_id )
   }
   //end of switch
 
-  return m_cfg.ptr_comm->SendNextionData(type, value.data(), length + 1 );
+  return (m_cfg.ptr_comm->SendNextionData(type, value.data(), length + 1 )? ERROR_SUCCESS : ERROR_FAIL);
 }
 
 
@@ -68,7 +68,7 @@ void api_lcd::doRunStep()
   using tx_t = NXLCD::TX_TYPE;
 
   constexpr uint8_t step_retry_max = 3;
-  constexpr uint32_t step_wait_delay = 50;
+  constexpr uint32_t step_wait_delay = 100;
 
 
   switch(m_step.GetStep())
@@ -97,8 +97,10 @@ void api_lcd::doRunStep()
     ######################################################*/
     case STEP_TIMEOUT:
     {
-      LOG_PRINT("STEP_TIMEOUT recovery result[%d]",  m_cfg.ptr_comm->Recovery());
-
+      LOG_PRINT("STEP_TIMEOUT recovery result[%d]", m_cfg.ptr_comm->Recovery());
+      m_cfg.ptr_comm->SendNextionData(tx_t::TX_LCD_END_REPARSEMODE, nullptr);
+      m_step.wait_resp = false; // reset
+      m_modeReparse = false;
       m_step.SetStep(STEP_TODO);
     }
     break;
@@ -110,6 +112,13 @@ void api_lcd::doRunStep()
       m_step.wait_resp = false;
       m_step.wait_step = 0;
       m_step.retry_cnt = 0;
+      //if (m_modeReparse == false)
+      {
+        m_modeReparse = true;
+        uint8_t set_reparse = 1;
+        LOG_PRINT("STEP_STATE_UPDATE SendNextionData");
+        m_cfg.ptr_comm->SendNextionData(tx_t::TX_LCD_START_REPARSEMODE, &set_reparse);
+      }
 
       m_step.SetStep(STEP_STATE_UPDATE_START);
     }
@@ -117,6 +126,9 @@ void api_lcd::doRunStep()
 
     case STEP_STATE_UPDATE_START:
     {
+      if(m_step.LessThan(step_wait_delay))
+        break;
+
       if (SendData(tx_t::TX_MCU_DATA) == ERROR_SUCCESS)
         m_step.SetStep(STEP_STATE_UPDATE_WAIT);
       else
@@ -149,7 +161,8 @@ void api_lcd::doRunStep()
 
     case STEP_STATE_UPDATE_END:
     {
-
+      m_cfg.ptr_comm->SendNextionData(tx_t::TX_LCD_END_REPARSEMODE, nullptr);
+      m_modeReparse = false;
       m_step.SetStep(STEP_TODO);
     }
     break;
@@ -177,7 +190,7 @@ void api_lcd::ProcessCmd(NXLCD::uart_nextion::packet_st& data)
    */
 
   cmd_t rx_cmd = (cmd_t)m_receiveData.type;
-  LOG_PRINT("ProcessCmd cmd type[%d]", rx_cmd);
+  LOG_PRINT("ProcessCmd cmd type[%d], resp_ms[%d]", rx_cmd, m_receiveData.resp_ms);
   switch (rx_cmd)
   {
   case cmd_t::CMD_READ_MCU_DATA:
@@ -218,8 +231,8 @@ void api_lcd::ProcessCmd(NXLCD::uart_nextion::packet_st& data)
       LcdUpdate();
       break;
   case cmd_t::CMD_CTRL_REQ_BEEP:
-      if (m_cfg.ptr_mcu_reg->option_reg.use_beep)
-        buzzerBeep(1, 2);
+      //if (m_cfg.ptr_mcu_reg->option_reg.use_beep)
+      //  buzzerBeep(1, 2);
       break;
 
   default:

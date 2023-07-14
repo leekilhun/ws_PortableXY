@@ -26,7 +26,7 @@ file(GLOB_RECURSE SRC_FILES_RECURSE CONFIGURE_DEPENDS
   src/bsp/*.c
   src/common/*.c    
   lib/hal/Src/*.c
-  lib/rtos/*.c
+  #lib/rtos/*.c
 )
 
 add_executable(${EXECUTABLE} 
@@ -39,7 +39,7 @@ add_executable(${EXECUTABLE}
 
 target_compile_definitions(${EXECUTABLE} PRIVATE
   -DSTM32G070xx
-  -D_USE_HW_RTOS
+  #-D_USE_HW_RTOS
   -DUSER_VECT_TAB_ADDRESS
   -DDEBUG
   )
@@ -61,10 +61,10 @@ target_include_directories(${EXECUTABLE} PRIVATE
   lib/cmsis/Include
   lib/hal/Inc
 
-  lib/rtos
-  lib/rtos/Source/CMSIS_RTOS
-  lib/rtos/Source/portable/GCC/ARM_CM0
-  lib/rtos/Source/include
+  #lib/rtos
+  #lib/rtos/Source/CMSIS_RTOS
+  #lib/rtos/Source/portable/GCC/ARM_CM0
+  #lib/rtos/Source/include
 )
 
 
